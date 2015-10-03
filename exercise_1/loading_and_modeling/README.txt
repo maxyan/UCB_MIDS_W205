@@ -1,0 +1,1 @@
+This is UCB MIDS W205 Exercise 1, creating loading_and_modeling folder
