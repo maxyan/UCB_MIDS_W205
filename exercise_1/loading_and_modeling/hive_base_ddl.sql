@@ -1,0 +1,15 @@
+drop table hospitals;
+create external table hospitals (provider_id int, hospital_name varchar(255), address varchar(255), city varchar(255), zipcode int, county_name varchar(255), phone_number int, hospital_type varchar(255), hospital_ownership varchar(255), emergency_serv boolean, location varchar(255)) row format delimited fields terminated by ',' stored as textfile location '/path/in/hdfs';
+
+
+drop table measure_dates;
+create external table measure_dates (measure_name varchar(255), measure_id varchar(255), start_quarter varchar(255), start_date varchar(255), end_quarter varchar(255), end_date varchar(255)) row format delimited fields terminated by ',' stored as textfile location '/path/in/hdfs';
+
+drop table effective_care;
+create external table effective_care (provider_id int, hospital_name varchar(255), address varchar(255), city varchar(255), state varchar(255), zip_code int, county_name varchar(255), phone_number int, condition varchar(255), measure_id varchar(255), measure_name varchar(255), score int, sample int, footnote varchar(255), start_date varchar(255), end_date varchar(255), location varchar(255)) row format delimited fields terminated by ',' stored as textfile location '/path/in/hdfs';
+
+drop table readmissions;
+create external table readmissions (provider_id int, hospital_name varchar(255), address varchar(255), city varchar(255), state varchar(255), zip_code int, county_name varchar(255), phone_number int, measure_name varchar(255), measure_id varchar(255), compare_to_national varchar(255), denominator int, score double, lower_estimate double, higher_estimate double, footnote varchar(255), start_date varchar(255), end_date varchar(255), location varchar(255)) row format delimited fields terminated by ',' stored as textfile location '/path/in/hdfs';
+
+drop table surveys_responses;
+create external table survey_responses (provider_id int, hospital_name varchar(255), address varchar(255), city varchar(255), state varchar(255), zip_code int, county_name varchar(255), comm_nurse_achievement varchar(255), comm_nurse_improvement varchar(255), comm_nurse_dimension varchar(255), comm_doctor_achievement varchar(255), comm_doctor_improvement varchar(255), comm_doctor_dimension varchar(255), responsive_staff_achievement varchar(255), responsive_staff_improvement varchar(255), responsive_staff_dimension varchar(255), pain_management_achievement varchar(255), pain_management_improvement varchar(255), pain_management_dimension varchar(255), comm_medicines_achievement varchar(255), comm_medicines_improvement varchar(255), comm_medicines_dimension varchar(255), clean_and_quiet_achievement varchar(255), clean_and_quiet_improvement varchar(255), clean_and_quiet_dimension varchar(255), discharge_info_achievement varchar(255), discharge_info_improvement varchar(255), discharge_info_dimension varchar(255), overall_achievement varchar(255), overall_improvement varchar(255), overall_dimension varchar(255), hcahps_base int, hcahps_consistency int) row format delimited fields terminated by ',' stored as textfile location '/path/in/hdfs';
