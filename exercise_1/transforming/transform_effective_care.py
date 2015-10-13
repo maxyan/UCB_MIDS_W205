@@ -15,5 +15,25 @@ effective_care.saveAsTextFile('file:///data/exercise1/effective_care')
 effective_care_tuple = parts.map(lambda p:(str(p[0])[1:-1],[str(p[8])[1:-1], str(p[9])[1:-1], str(p[11])[1:-1], str(p[12])[1:-1]]))
 
 result = effective_care_tuple.groupByKey() # group by key
-first_group = result.first()
-list(first_group[1])
+first = result.first()
+list(first[1])
+
+# This function computes the average score given a key
+def average_score(measures, score_idx=2):
+...     total = 0
+...     count = 0
+...     for entry in measures:
+...             try:
+...                     curr = int(entry[score_idx])
+...             except:
+...                     curr = None
+...             if curr:
+...                     total += curr
+...                     count += 1
+...     if count > 0:
+...             return float(total) / count
+...     return None
+
+# compute average scores and sort them descendingly
+scores = result.map(lambda p:(p[0], average_score(p[1])))
+sorted_scores = scores.sortBy(lambda x:x[1], False)

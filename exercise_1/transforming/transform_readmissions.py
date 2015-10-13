@@ -12,3 +12,6 @@ readmissions.saveAsTextFile('file:///data/exercise1/readmissions')
 # Explorations
 # 'provider_id measure_id compare_to_national denominator score lower_estimate higher_estimate'
 readmissions_tuple = parts.map(lambda p:(str(p[0])[1:-1], [str(p[9])[1:-1], str(p[10])[1:-1], str(p[11])[1:-1], str(p[12])[1:-1], str(p[13])[1:-1], str(p[14])[1:-1]])) 
+result = readmissions_tuple.groupByKey() # group by key
+first = result.first()
+list(first[1])
