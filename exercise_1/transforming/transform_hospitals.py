@@ -6,12 +6,12 @@ sc = SparkContext("local", "weblog app")
 sqlContext=SQLContext(sc)
 lines = sc.textFile('file:///data/exercise1/hospital_compare/hospitals.csv')
 parts = lines.map(lambda l:l.split(','))
-schema_string = 'provider_id hospital_name city state zipcode'
-hospitals = parts.map(lambda p:str(p[0])[1:-1]+','+str(p[1])[1:-1]+','+str(p[3])[1:-1]+','+str(p[4])[1:-1]+','+str(p[5])[1:-1])
+schema_string = 'provider_id hospital_name state'
+hospitals = parts.map(lambda p:str(p[0])[1:-1]+','+str(p[1])[1:-1]+','+str(p[4])[1:-1])
 hospitals.saveAsTextFile('file:///data/exercise1/hospitals')
 
-# Load data from file
-hospitals_tuple = sc.textFile('file:///data/exercise1/hospitals').map(lambda l:l.encode().split(',')).map(lambda x: (x[0], x[1:]))
+# Name or address sometimes contains ',', this is an example. Think about how to correct
+seward = lines.filter(lambda x:"SEWARD" in x)
 
 # Below deals with creating dataframes and tables - below is no longer relevant
 # data_types = [StringType(), StringType(), StringType(), StringType(), StringType()]
