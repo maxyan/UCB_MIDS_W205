@@ -20,9 +20,11 @@ def range_func(measures):
 		return 0
 	return max(scores) - min(scores)
 
-procedure_score_range = procedure_care_grouped.map(lambda p:(p[0], range_func(p[1])))
+measure_dates = sc.textFile('file:///data/exercise1/measure_dates').map(lambda l:l.encode().split(',')).map(lambda x: (x[1], x[0]))
+procedure_score_range = procedure_care_grouped.map(lambda p:(p[0], range_func(p[1]))).join(measure_dates)
 sorted_ranges = procedure_score_range.sortBy(lambda x:x[1], False)
-print(sorted_ranges.take(10))
+top = sorted_ranges.take(10)
+print(top)
 
 # Based on readmissions
 # readmissions = sc.textFile('file:///data/exercise1/readmissions').map(lambda l:l.encode().split(',')).map(lambda x: (x[0], x[1:]))
