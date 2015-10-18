@@ -6,20 +6,21 @@ sc = SparkContext("local", "weblog app")
 effective_care = sc.textFile('file:///data/exercise1/effective_care').map(lambda l:l.encode().split(',')).map(lambda x: (x[0], x[1:]))
 hospitals = sc.textFile('file:///data/exercise1/hospitals').map(lambda l:l.encode().split(',')).map(lambda x: (x[0], x[1:]))
 
+state_care = effective_care.join(hospitals).map(lambda p:(p[1][1][2], p[1][0]))
 # Some exploration only
 # 'provider_id condition measure_id score sample' - both score and sample can be "Not Available"
 result = effective_care.groupByKey() # group by key
 
 # This function computes the average score given a key
-def average_care(measures):
+def average_score(measures, score_idx=2):
 	total = 0
 	count = 0
 	for entry in measures:
 		try:
-			curr = int(entry[2])
+			curr = int(entry[score_idx])
 		except:
 			curr = None
-		if curr is not None:
+		if curr:
 			total += curr
 			count += 1
 	if count > 0:
@@ -27,7 +28,7 @@ def average_care(measures):
 	return None
 
 # compute average scores and sort them descendingly
-scores = result.map(lambda p:(p[0], average_care(p[1])))
+scores = result.map(lambda p:(p[0], average_score(p[1])))
 joined_scores = scores.join(hospitals)
 sorted_scores = joined_scores.sortBy(lambda x:x[1][0], False)
 print(sorted_scores.take(10))
