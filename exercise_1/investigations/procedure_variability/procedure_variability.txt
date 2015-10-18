@@ -1,0 +1,21 @@
+It appears that ED_2b has the greatest variability between hospitals. 
+
+This is done by:
+1. Group the data from effective_care by measure_ids
+2. Compute the range of the score (i.e. MAX - MIN) for each measure_id
+	2.1 Some measures have "Not Available" for some hospitals, in this case, this entry is ignored.
+3. Sort the measures by their range score in descending order
+4. Join with measure_dates to get the actual name of the measure
+
+
+[
+('ED_2b', (1132, 'Admit Decision Time to ED Departure Time for Admitted Patients')), 
+('ED_1b', (1106, 'Median Time from ED Arrival to ED Departure for Admitted ED Patients')), 
+('OP_18b', (399, 'Median Time from ED Arrival to ED Departure for Discharged ED Patients')), 
+('OP_3b', (200, 'Median Time to Transfer to Another Facility for Acute Coronary Intervention- Reporting Rate')), 
+('OP_21', (170, 'Median Time to Pain Management for Long Bone Fracture')), 
+('OP_20', (143, 'Median Time from ED Arrival to Provider Contact for ED patients')), 
+('OP_5', (142, 'Median Time to ECG')), ('VTE_5', (100, 'Venous Thromboembolism Warfarin Therapy Discharge Instructions')), 
+('VTE_1', (100, 'Venous Thromboembolism Prophylaxis')), 
+('VTE_4', (100, 'Venous Thromboembolism Patients Receiving Unfractionated Heparin with Dosages/Platelet Count Monitoring by Protocol or Nomogram'))
+]

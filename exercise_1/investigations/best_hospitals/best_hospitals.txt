@@ -1,0 +1,17 @@
+According to the data description file, readmission scores are "the lower the better" while effective care scores are the higher the better. As such, for each hospital, 
+I compute the arithmetic average effective_care scores across a range of procedures, and sort their average scores from high to low. 
+
+Scores for some hospitals are "Not Available". These cases are left out and not counted into the average score. 
+
+Below are the top 10 hospitals according to their average scores. 
+
+[('450348', (235.58333333333334, ['FALLS COMMUNITY HOSPITAL AND CLINIC', 'TX'])), 
+('051335', (175.33333333333334, ['BEAR VALLEY COMMUNITY HOSPITAL', 'CA'])), 
+('400079', (175.13333333333333, ['HOSP COMUNITARIO BUEN SAMARITANO', 'PR'])), 
+('310002', (138.40540540540542, ['NEWARK BETH ISRAEL MEDICAL CENTER', 'NJ'])), 
+('670090', (137.0, ['CRESCENT MEDICAL CENTER LANCASTER', 'TX'])), 
+('451330', (136.0, ['MEDINA REGIONAL HOSPITAL', 'TX'])), 
+('400032', (135.27777777777777, ['HOSPITAL HERMANOS MELENDEZ INC', 'PR'])), 
+('400013', (133.19999999999999, ['HOSPITAL MENONITA DE CAYEY', 'PR'])), 
+('051318', (130.33333333333334, ['REDWOOD MEMORIAL HOSPITAL', 'CA'])), 
+('261317', (128.0, ['MERCY HOSPITAL CASSVILLE', 'MO']))]
