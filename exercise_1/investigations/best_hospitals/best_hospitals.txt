@@ -3,8 +3,9 @@ I compute the arithmetic average effective_care scores across a range of procedu
 
 Scores for some hospitals are "Not Available". These cases are left out and not counted into the average score. 
 
-Below are the top 10 hospitals according to their average scores. 
+Below are the top 10 hospitals according to their average scores, both the highest and lowest.
 
+Highest 10:
 [('450348', (235.58333333333334, ['FALLS COMMUNITY HOSPITAL AND CLINIC', 'TX'])), 
 ('051335', (175.33333333333334, ['BEAR VALLEY COMMUNITY HOSPITAL', 'CA'])), 
 ('400079', (175.13333333333333, ['HOSP COMUNITARIO BUEN SAMARITANO', 'PR'])), 
@@ -15,3 +16,16 @@ Below are the top 10 hospitals according to their average scores.
 ('400013', (133.19999999999999, ['HOSPITAL MENONITA DE CAYEY', 'PR'])), 
 ('051318', (130.33333333333334, ['REDWOOD MEMORIAL HOSPITAL', 'CA'])), 
 ('261317', (128.0, ['MERCY HOSPITAL CASSVILLE', 'MO']))]
+
+Lowest 10:
+[('501304', (1.0, ['SUMMIT PACIFIC MEDICAL CENTER-SWING BED UNIT', 'WA'])), 
+('250079', (1.0, ['SHARKEY ISSAQUENA COMMUNITY HOSPITAL', 'MS'])), 
+('351310', (8.0, ['SAKAKAWEA MEDICAL CENTER - CAH', 'ND'])), 
+('251333', (14.0, ['PEARL RIVER COUNTY HOSPITAL', 'MS'])), 
+('451349', (15.0, ['SWISHER MEMORIAL HOSPITAL', 'TX'])), 
+('171357', (18.0, ['HILLSBORO COMMUNITY HOSPITAL', 'KS'])), 
+('01021F', (21.0, ['TUSCALOOSA VA MEDICAL CENTER', 'AL'])), 
+('171372', (28.5, ['SCOTT COUNTY HOSPITAL', 'KS'])), 
+('171360', (33.0, ['LINCOLN COUNTY HOSPITAL', 'KS'])), 
+('141321', (34.0, ['FRANKLIN HOSPITAL', 'IL']))]
+

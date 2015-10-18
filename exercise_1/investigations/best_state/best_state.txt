@@ -1,0 +1,33 @@
+Assuming higher scores in effective_care indicates higher overall quality, the best 10 states are DC, MD, DE, NY, NJ, NV, CT, NH, CA, and MA. 
+
+This is computed as following:
+1. From effective_care and hospitals, get (state, score) pairs;
+2. Group by state;
+3. Compute the average of all scores for a given state;
+4. Sort by average scores in ascending or descending order.
+
+
+[Sample Output]
+Highest scores 10 states:
+[('DC', 104.85658914728683), 
+('MD', 103.44409199048374), 
+('DE', 102.56923076923077), 
+('NY', 99.989844683393073), 
+('NJ', 99.440205743677666), 
+('NV', 98.929455445544548), 
+('CT', 98.919514884233735), 
+('NH', 98.734323432343231), 
+('CA', 98.171002218189145), 
+('MA', 97.750937332619174)]
+
+Lowest scores 10 states:
+[('GU', 84.17647058823529), 
+('KS', 86.559814937210845), 
+('MS', 86.847663012117721), 
+('OK', 87.246399999999994), 
+('ND', 88.829850746268662), 
+('MN', 89.4415164123902), 
+('AR', 89.452332657200813), 
+('WY', 89.551122194513709), 
+('IA', 90.21941747572815), 
+('TN', 90.39374325782093)]

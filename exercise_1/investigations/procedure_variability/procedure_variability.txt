@@ -1,4 +1,4 @@
-It appears that ED_2b has the greatest variability between hospitals. 
+It appears that ED_2b (i.e. Admit Decision Time to ED Departure Time for Admitted Patients) has the greatest variability between hospitals. 
 
 This is done by:
 1. Group the data from effective_care by measure_ids

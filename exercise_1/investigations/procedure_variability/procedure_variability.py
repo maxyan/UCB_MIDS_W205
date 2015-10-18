@@ -25,10 +25,3 @@ procedure_score_range = procedure_care_grouped.map(lambda p:(p[0], range_func(p[
 sorted_ranges = procedure_score_range.sortBy(lambda x:x[1], False)
 top = sorted_ranges.take(10)
 print(top)
-
-# Based on readmissions
-# readmissions = sc.textFile('file:///data/exercise1/readmissions').map(lambda l:l.encode().split(',')).map(lambda x: (x[0], x[1:]))
-# procedure_readmissions = readmissions.map(lambda p:(p[1][0], [p[0], p[1][2]]))
-# procedure_readmissions_grouped = procedure_readmissions.groupByKey()
-# procedure_readmissions_range = procedure_readmissions_grouped.map(lambda p:(p[0], range_func(p[1])))
-# sorted_readmissions = procedure_readmissions_range.sortBy(lambda x:x[1], False)

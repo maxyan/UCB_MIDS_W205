@@ -1,0 +1,28 @@
+The correlation between average effective_care score and survey responses for all hospitals is approximately -0.25, and the correlation between average readmission
+scores and survey responses is approximately -0.15. As such, there is a negative correlation between scores of hospital quality and patient survey. 
+
+This is expected when we inspect the definition of readmission and effective_care:
+1. Readmissions scores measures the rate of readmission and deaths, and hence the lower the better;
+2. A significant portion of effective_care scores measure either the median time between operations or the rate of patients' condition deteriorating, and it is possible that
+this measure is the lower the better.
+
+As a result, a higher score in either area should, and does, correlate with a lower patient survey score. 
+
+The results are obtained by:
+1. Compute the average survey score for each hospital;
+2. Compute the average effective_care score, and average readmission score for each hospital;
+3. Join effective_care score and readmission score (individually) with survey score for each hospital;
+4. Run a correlation between the effective_care / readmission score and the corresponding survey score.
+
+
+[Sample Output]
+
+Correlation between average effective_care scores and survey responses:
+[[ 1.         -0.25251772]
+ [-0.25251772  1.        ]]
+
+
+Correlation between average readmission scores and survey responses:
+[[ 1.         -0.14474279]
+ [-0.14474279  1.        ]]
+
