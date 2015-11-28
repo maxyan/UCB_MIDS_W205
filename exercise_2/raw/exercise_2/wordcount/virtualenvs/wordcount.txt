@@ -1,2 +1,0 @@
-streamparse # always required for streamparse projects
-redis       # for writing into redis

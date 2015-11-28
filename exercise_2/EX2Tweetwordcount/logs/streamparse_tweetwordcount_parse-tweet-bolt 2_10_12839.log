@@ -1,0 +1,1 @@
+2015-11-28 16:50:01,212 - streamparse.storm.component - ERROR - Received EOF while trying to read stdin from Storm, pipe appears to be broken, exiting.

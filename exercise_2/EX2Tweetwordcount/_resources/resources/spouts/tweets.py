@@ -10,10 +10,10 @@ from streamparse.spout import Spout
 # Twitter credentials
 ################################################################################
 twitter_credentials = {
-    "consumer_key"        :  "<enter your consumer key>",
-    "consumer_secret"     :  "<enter your consumer secret key>",
-    "access_token"        :  "<enter your access token>",
-    "access_token_secret" :  "<enter your access token secret key>",
+    "consumer_key"        :  "7zKulgQh8LNKDk6uv95LGJU9l",
+    "consumer_secret"     :  "3LMyLGqf29H7JiYfEysnThBAs1xwfwoGkyHuXLxWts8HeXj7JA",
+    "access_token"        :  "149939938-Meyglx1MDT9XQZttB2bSyVrcVtGlBtiZwI4Ct77E",
+    "access_token_secret" :  "SwvCFQycb86zpzlToNkYxJqHr6ytT4m7Up4p67JQsrtya",
 }
 
 def auth_get(auth_key):
@@ -41,7 +41,6 @@ class TweetStreamListener(tweepy.StreamListener):
         return True # keep stream alive
 
 class Tweets(Spout):
-
     def initialize(self, stormconf, context):
         self._queue = Queue.Queue(maxsize = 100)
 

@@ -1,0 +1,9 @@
+2015-11-28 16:42:35,350 - streamparse.storm.component - ERROR - Exception in WordCounter.run()
+Traceback (most recent call last):
+  File "/home/myan/anaconda/lib/python2.7/site-packages/streamparse/storm/component.py", line 487, in run
+    self.initialize(storm_conf, context)
+  File "bolts/wordcount.py", line 15, in initialize
+    count INT     NOT NULL);''')
+IntegrityError: duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+DETAIL:  Key (typname, typnamespace)=(tweetwordcount, 2200) already exists.
+

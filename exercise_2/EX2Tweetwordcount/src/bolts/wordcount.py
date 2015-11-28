@@ -2,14 +2,34 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from collections import Counter
 from streamparse.bolt import Bolt
-
+import psycopg2
 
 
 class WordCounter(Bolt):
-
     def initialize(self, conf, ctx):
         self.counts = Counter()
-        self.redis = StrictRedis()
+        self.conn = psycopg2.connect(database="Tcount", user="postgres", password="postgres", host="localhost", port="5432")
+        cur = self.conn.cursor()
+
+        # myan: check if the table Tweetwordcount already exists. I
+        # If so, then query the database to get existing counts
+        # Otherwise, create the table
+        cur.execute("SELECT * FROM pg_catalog.pg_tables")
+        self.create_table = True
+        for record in cur.fetchall():
+            if 'tweetwordcount' in record:
+                self.create_table = False
+                break
+
+        if self.create_table:
+            cur.execute('''CREATE TABLE Tweetwordcount
+                   (word TEXT PRIMARY KEY     NOT NULL,
+                   count INT     NOT NULL);''')
+        else:
+            cur.execute("SELECT word, count from Tweetwordcount")
+            for (key, count) in cur.fetchall():
+                self.counts[key] = count
+        self.conn.commit()
 
     def process(self, tup):
         word = tup.values[0]
@@ -19,11 +39,18 @@ class WordCounter(Bolt):
         # Database name: Tcount 
         # Table name: Tweetwordcount 
         # you need to create both the database and the table in advance.
-        
 
         # Increment the local count
         self.counts[word] += 1
         self.emit([word, self.counts[word]])
+
+        # myan: insert or update, depending on how many counts there are
+        cur = self.conn.cursor()
+        if self.counts[word] == 1:
+            cur.execute("INSERT INTO Tweetwordcount (word,count) VALUES ('{text}', 1)".format(text=word))
+        else:
+            cur.execute("UPDATE Tweetwordcount SET count={count} WHERE word='{word}'".format(word=word, count=self.counts[word]))
+        self.conn.commit()
 
         # Log the count - just to see the topology running
         self.log('%s: %d' % (word, self.counts[word]))
