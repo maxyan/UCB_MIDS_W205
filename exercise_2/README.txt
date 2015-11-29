@@ -53,18 +53,24 @@ host	all	all	0.0.0.0/0	md5
 7. Restart the postgres server
 $ sudo /etc/init.d/postgresql restart
 
-In case the above does not work, then execute the following:
-$ service postgresql initdb
-$ sudo /etc/init.d/postgresql restart
-
-8. Change the password for user 'postgres' and create the database Tcount
+8. Change the password for user 'postgres'
 $ sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
-$ sudo -u postgres createdb -O postgres Tcount
 $ sudo /etc/init.d/postgresql restart
 
-9. Checkout the code from Max's Github account
-$ git clone https://github.com/maxyan/UCB_MIDS_W205.git
+9. Create database Tcount and table Tweetwordcount
+Since the AMI is using PostgresSQL 8.4, which is fairly outdated version and which does not come with the functionality
+to "CREATE TABLE IF NOT EXISTS", we decide to set up the database Tcount and table Tweetwordcount first.
 
-10. Enter the streaming application directory and run the application
+$ sudo -u postgres createdb -O postgres Tcount
+$ python
+>>> import psycopg2
+>>> conn = psycopg2.connect(database="Tcount", user="postgres", password="postgres", host="localhost", port="5432")
+>>> cur = conn.cursor()
+>>> cur.execute('''CREATE TABLE Tweetwordcount (word TEXT PRIMARY KEY NOT NULL, count INT NOT NULL);''')
+>>> conn.commit()
+>>> quit()
+
+10. Checkout the code from Max's Github account and run application
+$ git clone https://github.com/maxyan/UCB_MIDS_W205.git
 $ cd UCB_MIDS_W205/exercise_2/EX2Tweetwordcount/
 $ sparse run

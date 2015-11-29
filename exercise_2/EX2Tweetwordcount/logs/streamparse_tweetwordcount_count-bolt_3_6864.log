@@ -1,0 +1,8 @@
+2015-11-29 12:05:15,061 - streamparse.storm.component - ERROR - Exception in WordCounter.run()
+Traceback (most recent call last):
+  File "/home/myan/anaconda/lib/python2.7/site-packages/streamparse/storm/component.py", line 487, in run
+    self.initialize(storm_conf, context)
+  File "bolts/wordcount.py", line 21, in initialize
+    count INT     NOT NULL);''')
+InternalError: current transaction is aborted, commands ignored until end of transaction block
+
