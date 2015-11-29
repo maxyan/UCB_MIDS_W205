@@ -11,24 +11,16 @@ class WordCounter(Bolt):
         self.conn = psycopg2.connect(database="Tcount", user="postgres", password="postgres", host="localhost", port="5432")
         cur = self.conn.cursor()
 
-        # myan: check if the table Tweetwordcount already exists. I
-        # If so, then query the database to get existing counts
-        # Otherwise, create the table
-        cur.execute("SELECT * FROM pg_catalog.pg_tables")
-        self.create_table = True
-        for record in cur.fetchall():
-            if 'tweetwordcount' in record:
-                self.create_table = False
-                break
-
-        if self.create_table:
-            cur.execute('''CREATE TABLE Tweetwordcount
+        # myan: create the table Tweetwordcount if it does not exist
+        cur.execute('''CREATE TABLE IF NOT EXISTS Tweetwordcount
                    (word TEXT PRIMARY KEY     NOT NULL,
                    count INT     NOT NULL);''')
-        else:
-            cur.execute("SELECT word, count from Tweetwordcount")
-            for (key, count) in cur.fetchall():
-                self.counts[key] = count
+
+        # myan: get all the words already in the table, primarily for restarting the application
+        cur.execute("SELECT word, count from Tweetwordcount")
+        for (key, count) in cur.fetchall():
+            self.counts[key] = count
+
         self.conn.commit()
 
     def process(self, tup):
