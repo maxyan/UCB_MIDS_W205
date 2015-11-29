@@ -11,16 +11,9 @@ class WordCounter(Bolt):
         self.conn = psycopg2.connect(database="Tcount", user="postgres", password="postgres", host="localhost", port="5432")
         cur = self.conn.cursor()
 
-        try:
-            cur.execute("SELECT word, count from Tweetwordcount")
-            for (key, count) in cur.fetchall():
-                self.counts[key] = count
-        except:
-            self.conn.rollback()
-            cur.execute('''CREATE TABLE Tweetwordcount
-                   (word TEXT PRIMARY KEY     NOT NULL,
-                   count INT     NOT NULL);''')
-
+		cur.execute("SELECT word, count from Tweetwordcount")
+		for (key, count) in cur.fetchall():
+			self.counts[key] = count
         self.conn.commit()
 
     def process(self, tup):
