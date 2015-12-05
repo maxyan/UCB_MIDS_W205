@@ -4,6 +4,7 @@ import json
 
 import boto3
 import pandas as pd
+from boto3.dynamodb.conditions import Key
 
 AWS_ACCESS_KEY = 'Your Access Key'
 AWS_SECRET_ACCESS_KEY = 'Your AWS Secret Key'
@@ -60,7 +61,7 @@ class DynamoDb:
         This is the AWS DynamoDB interaction layer for our application.
         It is required to create a new object for interaction with an individual table.
         Args:
-            level: ('state') | 'city' | 'neighborhood'
+            **kwargs: dict, dict(endpoint_url= , region_name= , aws_access_key_id=, aws_secret_access_key= )
 
         Returns:
             An object that interacts with Amazon DynamoDB
@@ -104,8 +105,6 @@ class DynamoDb:
                          global_secondary_hash_key=None,
                          global_secondary_read_capacity=10,
                          global_secondary_write_capacity=10):
-        # TODO: detect if a table already exists
-
         table = self.dynamodb.Table(table_name)
         self.table_name = table_name
         try:
@@ -121,7 +120,7 @@ class DynamoDb:
             self.write_capacity = table.provisioned_throughput['WriteCapacityUnits']
 
             if len(table.global_secondary_indexes) > 0:
-                # TODO: look into if we ned to support multiple global secondary indexes?
+                # TODO: look into if we need to support multiple global secondary indexes?
                 entry = table.global_secondary_indexes[0]
                 self.global_secondary_index = entry['IndexName']
                 self.global_secondary_read_capacity = entry['ProvisionedThroughput']['ReadCapacityUnits']
@@ -188,8 +187,17 @@ class DynamoDb:
             )
             print("Table status:", table.table_status)
 
-    def add_data(self, data, attribute):
-        entries = json.loads(data, parse_float=decimal.Decimal)
+    def add_data(self, json_data, attribute):
+        """
+        Primary entry point for adding data to the DynamoDB
+        Args:
+            json_data: json document of the data
+            attribute: attribute to put the data to
+
+        Returns:
+            NULL
+        """
+        entries = json.loads(json_data, parse_float=decimal.Decimal)
         table = self.dynamodb.Table(self.table_name)
         for month in entries.keys():
             for state in entries[month].keys():
@@ -221,56 +229,73 @@ class DynamoDb:
                         }
                     )
 
-    def query(self, use_global_secondary=False, conditions=None):
+    def get_data(self, conditions=None):
         """
-        Performs a query operation on the table
+        The method used for getting data from DynamoDB. Depending on the conditions being passed,
+        it will either use table.query or table.scan.
         Args:
-            use_global_secondary: boolean, (False) | True, which index to look at.
-            conditions: list, a list of conditions (dict).
+            conditions: list, a list of dictionary of {function: , values:}
 
         Returns:
-            A dataframe contains the results
+            A dataframe containing the results
 
         Examples:
-            query("State", conditions=[dict(function=Key('state').eq, values='California')])
-        """
+            dynamo_state.get_data(conditions=[dict(function=Key('state').eq, values='California')])
 
-        index_name = self.global_secondary_index if use_global_secondary else None
-        table = self.dynamodb.Table(self.table_name)
-        fe = _conditions(conditions)
-        if index_name:
-            response = table.query(
-                TableName=self.table_name,
-                IndexName=index_name,
-                Select='ALL_ATTRIBUTES',
-                KeyConditionExpression=fe
-            )
+            dynamo_state.get_data(conditions=[dict(function=Key('year_month').eq, values=201510)])
+
+            dynamo_state.get_data(conditions=[dict(function=Key('year_month').between, values=[201508, 201509])])
+
+            dynamo_state.get_data(conditions=[dict(function=Attr('state').is_in, values=["California", "Alaska"])])
+
+            dynamo_state.get_data(conditions=[dict(function=Attr('state').is_in, values=["California", "Alaska"]),
+                                              dict(function=Attr('year_month').between, values=[201507, 201509])])
+
+            dynamo_state.get_data(conditions=[dict(function=Key('state').eq, values="California"),
+                                              dict(function=Attr('year_month').between, values=[201507, 201509])])
+
+        """
+        key_condition = None
+        for condition in conditions:
+            if self._has_hash_key_filter(condition['function']):
+                key_condition = condition
+                conditions.remove(key_condition)
+                break
+
+        if key_condition:
+            results = self._query(key_condition=key_condition, filter_conditions=conditions)
         else:
-            response = table.query(
-                Select='ALL_ATTRIBUTES',
-                KeyConditionExpression=fe
-            )
+            results = self._scan(conditions)
+        return results
+
+    def _has_hash_key_filter(self, function):
+        return isinstance(function.im_self, Key) and \
+               function.im_self.name in (self.hash_key, self.global_secondary_hash_key) and \
+               function.im_func.func_name == 'eq'
+
+    def _query(self, key_condition=None, filter_conditions=None):
+        table = self.dynamodb.Table(self.table_name)
+
+        arguments = dict(TableName=self.table_name,
+                         Select='ALL_ATTRIBUTES',
+                         KeyConditionExpression=_current_filter(key_condition))
+
+        if key_condition['function'].im_self.name != self.hash_key:
+            arguments.update(IndexName=self.global_secondary_index)
+
+        if filter_conditions:
+            arguments.update(FilterExpression=_conditions(filter_conditions))
+
+        response = table.query(**arguments)
         return pd.DataFrame(response['Items'])
 
-    def scan(self, conditions=None):
-        """
-        Performs a scan operation on the table
-        Args:
-            conditions: list, a list of conditions (dict).
-
-        Returns:
-            A dataframe contains the results
-
-        Examples:
-            scan("State", conditions=[dict(function=Attr('state').is_in, values=['California', 'Alaska']),
-                                      dict(function=Attr('year_month').between, values=[201507, 201509])])
-        """
+    def _scan(self, conditions=None):
         table = self.dynamodb.Table(self.table_name)
-        fe = _conditions(conditions)
+        filter_expression = _conditions(conditions)
 
         response = table.scan(
             Select='ALL_ATTRIBUTES',
-            FilterExpression=fe
+            FilterExpression=filter_expression
         )
 
         return pd.DataFrame(response['Items'])
