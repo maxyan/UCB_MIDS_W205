@@ -1,6 +1,7 @@
 import decimal
 import inspect
 import json
+
 import boto3
 import pandas as pd
 
@@ -187,38 +188,38 @@ class DynamoDb:
             )
             print("Table status:", table.table_status)
 
-    def add_price_data(self, state_price_json=None):
-        entries = json.loads(state_price_json, parse_float=decimal.Decimal)
-        table = self.dynamodb.Table('State')
+    def add_data(self, data, attribute):
+        entries = json.loads(data, parse_float=decimal.Decimal)
+        table = self.dynamodb.Table(self.table_name)
         for month in entries.keys():
-            print("Adding ", month)
             for state in entries[month].keys():
-                table.put_item(
-                    Item={
-                        'year_month': int(month.replace('-', '')),
-                        'state': str(state),
-                        'median_price': entries[month][state]
-                    }
-                )
-
-    def append_rent_data(self, json_data=None):
-        entries = json.loads(json_data, parse_float=decimal.Decimal)
-        table = self.dynamodb.Table('State')
-
-        for month in entries.keys():
-            print("Adding rental data for ", month)
-            for state in entries[month].keys():
-                table.update_item(
-                    Key={
-                        'year_month': int(month.replace('-', '')),
-                        'state': state
-                    },
-                    UpdateExpression="set median_rent = :r",
-                    ExpressionAttributeValues={
-                        ':r': entries[month][state]
-                    },
-                    ReturnValues="UPDATED_NEW"
-                )
+                range_key = int(month.replace('-', ''))
+                try:
+                    table.get_item(
+                        Key={
+                            self.hash_key: state,
+                            self.range_key: range_key
+                        }
+                    )
+                    table.update_item(
+                        Key={
+                            self.hash_key: state,
+                            self.range_key: range_key
+                        },
+                        UpdateExpression="set {attr_name} = :r".format(attr_name=attribute),
+                        ExpressionAttributeValues={
+                            ':r': entries[month][state]
+                        },
+                        ReturnValues="UPDATED_NEW"
+                    )
+                except:
+                    table.put_item(
+                        Item={
+                            self.hash_key: state,
+                            self.range_key: range_key,
+                            attribute: entries[month][state]
+                        }
+                    )
 
     def query(self, use_global_secondary=False, conditions=None):
         """
