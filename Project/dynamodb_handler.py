@@ -55,6 +55,27 @@ def _conditions(conditions):
     return fe
 
 
+def parse_hash_key(hash_key):
+    """
+    Parse a hash_key to return county and state information, if applicable
+    Args:
+        hash_key: string, "County, State" or "Neighborhood, County, State"
+
+    Returns:
+        county: string or None
+        state: string or None
+
+    """
+    elements = hash_key.replace(' ', '').split(',')
+    if len(elements) > 2:
+        # myan: "neighborhood, county, state"
+        return elements[1], elements[2]
+    if len(elements) > 1:
+        # myan: "county, state"
+        return None, elements[1]
+    return None, None
+
+
 class DynamoDb:
     def __init__(self, **kwargs):
         """
@@ -187,7 +208,7 @@ class DynamoDb:
             )
             print("Table status:", table.table_status)
 
-    def add_data(self, json_data, attribute):
+    def add_data(self, json_data, attribute=None):
         """
         Primary entry point for adding data to the DynamoDB
         Args:
@@ -199,35 +220,39 @@ class DynamoDb:
         """
         entries = json.loads(json_data, parse_float=decimal.Decimal)
         table = self.dynamodb.Table(self.table_name)
-        for month in entries.keys():
-            for state in entries[month].keys():
-                range_key = int(month.replace('-', ''))
-                try:
-                    table.get_item(
-                        Key={
-                            self.hash_key: state,
-                            self.range_key: range_key
-                        }
-                    )
+
+        for attr in entries.keys():
+            for hash_key in entries[attr].keys():
+                range_key = int(attr)
+                response = table.get_item(
+                    Key={
+                        self.hash_key: hash_key,
+                        self.range_key: range_key
+                    }
+                )
+                if 'Item' in response.keys():
                     table.update_item(
                         Key={
-                            self.hash_key: state,
+                            self.hash_key: hash_key,
                             self.range_key: range_key
                         },
                         UpdateExpression="set {attr_name} = :r".format(attr_name=attribute),
                         ExpressionAttributeValues={
-                            ':r': entries[month][state]
+                            ':r': entries[attr][hash_key]
                         },
                         ReturnValues="UPDATED_NEW"
                     )
-                except:
-                    table.put_item(
-                        Item={
-                            self.hash_key: state,
-                            self.range_key: range_key,
-                            attribute: entries[month][state]
-                        }
-                    )
+                else:
+                    county, state = parse_hash_key(hash_key)
+                    item_to_put = {self.hash_key: hash_key,
+                                   self.range_key: range_key,
+                                   attribute:entries[attr][hash_key]}
+                    if state:
+                        item_to_put.update(state=state)
+                    if county:
+                        item_to_put.update(county=county)
+
+                    table.put_item(Item=item_to_put)
 
     def get_data(self, conditions=None):
         """
