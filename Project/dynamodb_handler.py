@@ -1,13 +1,16 @@
 import decimal
 import inspect
 import json
-
+import us
 import boto3
 import pandas as pd
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 
 AWS_ACCESS_KEY = 'Your Access Key'
 AWS_SECRET_ACCESS_KEY = 'Your AWS Secret Key'
+STATE_ABBR_MAP = us.states.mapping('abbr', 'name')
+
+import pdb
 
 
 def default_aws_dynamodb_config():
@@ -53,27 +56,6 @@ def _conditions(conditions):
             else:
                 fe &= curr_filter
     return fe
-
-
-def parse_hash_key(hash_key):
-    """
-    Parse a hash_key to return county and state information, if applicable
-    Args:
-        hash_key: string, "County, State" or "Neighborhood, County, State"
-
-    Returns:
-        county: string or None
-        state: string or None
-
-    """
-    elements = hash_key.replace(' ', '').split(',')
-    if len(elements) > 2:
-        # myan: "neighborhood, county, state"
-        return elements[1], elements[2]
-    if len(elements) > 1:
-        # myan: "county, state"
-        return None, elements[1]
-    return None, None
 
 
 class DynamoDb:
@@ -140,7 +122,7 @@ class DynamoDb:
             self.read_capacity = table.provisioned_throughput['ReadCapacityUnits']
             self.write_capacity = table.provisioned_throughput['WriteCapacityUnits']
 
-            if len(table.global_secondary_indexes) > 0:
+            if table.global_secondary_indexes and len(table.global_secondary_indexes) > 0:
                 # TODO: look into if we need to support multiple global secondary indexes?
                 entry = table.global_secondary_indexes[0]
                 self.global_secondary_index = entry['IndexName']
@@ -161,81 +143,79 @@ class DynamoDb:
             self.global_secondary_read_capacity = global_secondary_read_capacity
             self.global_secondary_write_capacity = global_secondary_write_capacity
 
-            table = self.dynamodb.create_table(
-                TableName=table_name,
-                KeySchema=[
-                    {
-                        'AttributeName': hash_key,
-                        'KeyType': 'HASH'
+            key_schemas = [dict(AttributeName=hash_key, KeyType='HASH')]
+            key_attributes = [dict(AttributeName=hash_key, AttributeType='S')]
+            if range_key:
+                key_schemas.append(dict(AttributeName=range_key, KeyType='RANGE'))
+                key_attributes.append(dict(AttributeName=range_key, AttributeType='N'))
+
+            if global_secondary_index:
+                table = self.dynamodb.create_table(
+                    TableName=table_name,
+                    KeySchema=key_schemas,
+                    AttributeDefinitions=key_attributes,
+                    ProvisionedThroughput={
+                        'ReadCapacityUnits': read_capacity,
+                        'WriteCapacityUnits': write_capacity
                     },
-                    {
-                        'AttributeName': range_key,
-                        'KeyType': 'RANGE'
-                    },
-                ],
-                AttributeDefinitions=[
-                    {
-                        'AttributeName': hash_key,
-                        'AttributeType': 'S'
-                    },
-                    {
-                        'AttributeName': range_key,
-                        'AttributeType': 'N'
-                    }
-                ],
-                ProvisionedThroughput={
-                    'ReadCapacityUnits': read_capacity,
-                    'WriteCapacityUnits': write_capacity
-                },
-                GlobalSecondaryIndexes=[
-                    {
-                        'IndexName': global_secondary_index,
-                        'KeySchema': [
-                            {
-                                'AttributeName': global_secondary_hash_key,
-                                'KeyType': 'HASH'
+                    GlobalSecondaryIndexes=[
+                        {
+                            'IndexName': global_secondary_index,
+                            'KeySchema': [
+                                {
+                                    'AttributeName': global_secondary_hash_key,
+                                    'KeyType': 'HASH'
+                                },
+                            ],
+                            'Projection': {
+                                'ProjectionType': 'ALL'
                             },
-                        ],
-                        'Projection': {
-                            'ProjectionType': 'ALL'
-                        },
-                        'ProvisionedThroughput': {
-                            'ReadCapacityUnits': global_secondary_read_capacity,
-                            'WriteCapacityUnits': global_secondary_write_capacity
+                            'ProvisionedThroughput': {
+                                'ReadCapacityUnits': global_secondary_read_capacity,
+                                'WriteCapacityUnits': global_secondary_write_capacity
+                            }
                         }
+                    ],
+                )
+            else:
+                table = self.dynamodb.create_table(
+                    TableName=table_name,
+                    KeySchema=key_schemas,
+                    AttributeDefinitions=key_attributes,
+                    ProvisionedThroughput={
+                        'ReadCapacityUnits': read_capacity,
+                        'WriteCapacityUnits': write_capacity
                     }
-                ],
-            )
+                )
             print("Table status:", table.table_status)
 
-    def add_data(self, json_data, attribute=None):
+    def add_data(self, data=None, attribute=None):
         """
         Primary entry point for adding data to the DynamoDB
         Args:
-            json_data: json document of the data
+            data: json data
             attribute: attribute to put the data to
 
         Returns:
             NULL
         """
-        entries = json.loads(json_data, parse_float=decimal.Decimal)
+        entries = json.loads(data, parse_float=decimal.Decimal)
         table = self.dynamodb.Table(self.table_name)
 
         for attr in entries.keys():
             for hash_key in entries[attr].keys():
-                range_key = int(attr)
+                if attr.isdigit():
+                    keys = {self.hash_key: hash_key,
+                            self.range_key: int(attr)}
+                else:
+                    keys = {self.hash_key: hash_key}
+
                 response = table.get_item(
-                    Key={
-                        self.hash_key: hash_key,
-                        self.range_key: range_key
-                    }
+                    Key=keys
                 )
                 if 'Item' in response.keys():
                     table.update_item(
-                        Key={
-                            self.hash_key: hash_key,
-                            self.range_key: range_key
-                        },
+                        Key=keys,
                         UpdateExpression="set {attr_name} = :r".format(attr_name=attribute),
                         ExpressionAttributeValues={
                             ':r': entries[attr][hash_key]
@@ -243,10 +223,12 @@ class DynamoDb:
                         ReturnValues="UPDATED_NEW"
                     )
                 else:
-                    county, state = parse_hash_key(hash_key)
-                    item_to_put = {self.hash_key: hash_key,
-                                   self.range_key: range_key,
-                                   attribute:entries[attr][hash_key]}
+                    county, state = self.parse_hash_key(hash_key)
+                    item_to_put = keys
+                    item_to_put[attribute] = entries[attr][hash_key]
+                    # item_to_put = {self.hash_key: hash_key,
+                    #                self.range_key: range_key,
+                    #                attribute: entries[attr][hash_key]}
                     if state:
                         item_to_put.update(state=state)
                     if county:
@@ -324,3 +306,23 @@ class DynamoDb:
         )
 
         return pd.DataFrame(response['Items'])
+
+    def parse_hash_key(self, hash_key):
+        """
+        Parse a hash_key to return county and state information, if applicable
+        Args:
+            hash_key: string, "County, State" or "Neighborhood, County, State"
+
+        Returns:
+            county: string or None
+            state: string or None
+
+        """
+        elements = hash_key.replace(' ', '').split(',')
+        if len(elements) > 2:
+            # myan: "neighborhood, county, state"
+            return elements[1], STATE_ABBR_MAP[elements[2]]
+        if len(elements) > 1:
+            # myan: "county, state"
+            return None, STATE_ABBR_MAP[elements[1]]
+        return None, None
