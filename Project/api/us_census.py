@@ -37,8 +37,8 @@ class Census:
     def process(self):
         dynamodb = DynamoDb(**dict(endpoint_url="http://localhost:8000",
                                    region_name='us-east',
-                                   aws_access_key_id='AKIAIG7AXLCUG7VMZFDQ',
-                                   aws_secret_access_key='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'))
+                                   aws_access_key_id='AWS Key',
+                                   aws_secret_access_key='AWS Secret Key'))
         dynamodb.initialize_table('County',
                                   hash_key='county',
                                   read_capacity=1000,
