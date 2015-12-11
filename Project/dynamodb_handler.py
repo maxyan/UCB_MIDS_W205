@@ -101,7 +101,9 @@ class DynamoDb:
 
     def initialize_table(self, table_name,
                          hash_key=None,
+                         hash_key_type='S',
                          range_key=None,
+                         range_key_type='N',
                          read_capacity=10,
                          write_capacity=10,
                          global_secondary_index=None,
@@ -144,10 +146,10 @@ class DynamoDb:
             self.global_secondary_write_capacity = global_secondary_write_capacity
 
             key_schemas = [dict(AttributeName=hash_key, KeyType='HASH')]
-            key_attributes = [dict(AttributeName=hash_key, AttributeType='S')]
+            key_attributes = [dict(AttributeName=hash_key, AttributeType=hash_key_type)]
             if range_key:
                 key_schemas.append(dict(AttributeName=range_key, KeyType='RANGE'))
-                key_attributes.append(dict(AttributeName=range_key, AttributeType='N'))
+                key_attributes.append(dict(AttributeName=range_key, AttributeType=range_key_type))
 
             if global_secondary_index:
                 table = self.dynamodb.create_table(
@@ -189,6 +191,38 @@ class DynamoDb:
                 )
             print("Table status:", table.table_status)
 
+    import pdb
+
+    def batch_add_data(self, data, attribute=None):
+        entries = json.loads(data, parse_float=decimal.Decimal)
+
+        items_to_write = []
+        pdb.set_trace()
+        for attr in entries.keys():
+            for hash_key in entries[attr].keys():
+                if attr.isdigit():
+                    keys = {self.hash_key: {"S": hash_key},
+                            self.range_key: {"N": int(attr)}}
+                else:
+                    keys = {self.hash_key: {"S": hash_key}}
+                # county, state = self.parse_hash_key(hash_key)
+                item_to_put = keys
+                # item_to_put[attribute] = {"N": entries[attr][hash_key]}
+                # if state:
+                #     item_to_put.update(state={"S": state})
+                # if county:
+                #     item_to_put.update(county={"S": county})
+                items_to_write.append(dict(PutRequest={"Item": item_to_put}))
+
+        pdb.set_trace()
+        while True:
+            response = self.dynamodb.batch_write_item(RequestItems={self.table_name: items_to_write},
+                                                      ReturnConsumedCapacity="TOTAL")
+            if len(response["UnprocessedItems"][self.table_name]) < 1:
+                print "Batch write successful"
+                break
+            items_to_write = response["UnprocessedItems"][self.table_name]
+
     def add_data(self, data=None, attribute=None):
         """
         Primary entry point for adding data to the DynamoDB
@@ -223,16 +257,15 @@ class DynamoDb:
                         ReturnValues="UPDATED_NEW"
                     )
                 else:
-                    county, state = self.parse_hash_key(hash_key)
+                    zip_code, county, state = self.parse_hash_key(hash_key)
                     item_to_put = keys
                     item_to_put[attribute] = entries[attr][hash_key]
-                    # item_to_put = {self.hash_key: hash_key,
-                    #                self.range_key: range_key,
-                    #                attribute: entries[attr][hash_key]}
                     if state:
                         item_to_put.update(state=state)
                     if county:
                         item_to_put.update(county=county)
+                    if zip_code:
+                        item_to_put.update(zip_code=zip_code)
 
                     table.put_item(Item=item_to_put)
 
@@ -318,11 +351,11 @@ class DynamoDb:
             state: string or None
 
         """
-        elements = hash_key.replace(' ', '').split(',')
+        elements = hash_key.split('_')
         if len(elements) > 2:
-            # myan: "neighborhood, county, state"
-            return elements[1], STATE_ABBR_MAP[elements[2]]
+            # myan: "zipcode, county, state"
+            return int(elements[0]), elements[1], STATE_ABBR_MAP[elements[2]]
         if len(elements) > 1:
             # myan: "county, state"
-            return None, STATE_ABBR_MAP[elements[1]]
-        return None, None
+            return None, None, STATE_ABBR_MAP[elements[1]]
+        return None, None, None

@@ -16,7 +16,10 @@ class GreatSchools:
     def set_api_key(self, key=None):
         self.api_key = key
 
-    def nearby_schools(self, state=None, zip_code=None, radius=5, limit=10):
+    def run(self, **kwargs):
+        return self._nearby_schools(**kwargs)
+
+    def _nearby_schools(self, state=None, zip_code=None, radius=5, limit=10):
         """
         Gets a list of schools for a specified physical location (i.e. state + zip_code), within a certain radius
         Args:
