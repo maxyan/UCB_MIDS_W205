@@ -12,3 +12,11 @@ class TestPostgres(unittest.TestCase):
                                       field_list=['gsId', 'name', 'gsRating'])
 
         assert insert == "(100, 'Max', 3.5),(101, 'Tez', 8.5)"
+
+    def test_make_schema_string(self):
+        pg = Postgresql()
+        fields = {'gsid': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsrating': 'FLOAT'}
+        primary_key = 'gsid'
+        not_null_fields = ['gsid', 'zip_code', 'state', 'name']
+        schema_string = pg.make_schema_string(fields, primary_key=primary_key, not_null_fields=not_null_fields)
+        assert schema_string == '(gsid INT PRIMARY KEY NOT NULL,zip_code INT NOT NULL,state TEXT NOT NULL,name TEXT NOT NULL,gsrating FLOAT)'

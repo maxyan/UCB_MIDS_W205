@@ -147,3 +147,28 @@ class Postgresql:
             curr_string = curr_string[:-1] + "),"
             insert_string += curr_string
         return insert_string[:-1]
+
+    def make_schema_string(self, fields_type, primary_key, not_null_fields):
+        primary_is_not_null = False
+        if primary_key in not_null_fields:
+            not_null_fields.remove(primary_key)
+            primary_is_not_null = True
+
+        correct_sequence = [primary_key] + not_null_fields
+        for key in fields_type.keys():
+            if key not in correct_sequence:
+                correct_sequence.append(key)
+
+        schema_string = '('
+        for entry in correct_sequence:
+            schema_string += entry + ' '
+            schema_string += fields_type[entry] + ' '
+            if entry == primary_key:
+                schema_string += 'PRIMARY KEY' + ' '
+                if primary_is_not_null:
+                    schema_string += 'NOT NULL' + ' '
+            if entry in not_null_fields:
+                schema_string += 'NOT NULL' + ' '
+            schema_string += ','
+        schema_string = schema_string[:-1] + ')'
+        return schema_string

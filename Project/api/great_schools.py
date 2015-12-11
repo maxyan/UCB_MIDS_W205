@@ -1,5 +1,7 @@
-import requests
 from xml.etree import ElementTree
+
+import requests
+
 from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
 
 GREAT_SCHOOL_API_KEY = "Your Key"
@@ -19,19 +21,28 @@ class GreatSchools:
                                    port='5432',
                                    db='TestProject')
         # TODO: find a better and more generic way to parse the schema?
-        self.schema = '(gsId INT PRIMARY KEY NOT NULL, zip_code INT NOT NULL, state TEXT NOT NULL, name TEXT NOT NULL, gsRating FLOAT)'
-        self.fields = {'gsId': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsRating': 'FLOAT'}
+        self.schema = '(gsid INT PRIMARY KEY NOT NULL, zip_code INT NOT NULL, state TEXT NOT NULL, name TEXT NOT NULL, gsrating FLOAT)'
+        self.fields = {'gsid': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsrating': 'FLOAT'}
+        self.primary_key = 'gsid'
+        self.not_null_fields = ['gsid', 'zip_code', 'state', 'name']
         self.table = 'TestGreatSchools'
 
     def set_api_key(self, key=None):
         self.api_key = key
 
-    def run(self, **kwargs):
-        results = self._nearby_schools(**kwargs)
-        self.push(results)
+    def run(self, db_result=None, **kwargs):
+        # myan: seems python has a strange way of handling memory pointers when deleting elements from lists in a loop
+        # therefore create a separate list tmp_results to hold all the results from API calls first and decide what to
+        # include.
+        tmp_results = self._nearby_schools(**kwargs)
+        results = []
+        for entry in tmp_results:
+            if len(db_result) < 1 or entry['gsid'] not in db_result['gsid'].values:
+                results.append(entry)
+        self._push(results)
         return results
 
-    def push(self, data, batch_size=500):
+    def _push(self, data, batch_size=500):
         self.postgres.initialize_table(self.table, self.schema)
         fields_list = list(self.fields.keys())
         fields_to_push = self.postgres.construct_db_field_string(fields_list)
@@ -92,9 +103,9 @@ class GreatSchools:
             try:
                 for (func, field) in result_fields:
                     if func is None:
-                        curr_result[field] = school.find(field).text
+                        curr_result[field.lower()] = school.find(field).text
                     else:
-                        curr_result[field] = func(school.find(field).text)
+                        curr_result[field.lower()] = func(school.find(field).text)
             except:
                 pass
             if curr_result:
