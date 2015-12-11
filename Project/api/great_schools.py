@@ -15,41 +15,41 @@ class GreatSchools:
 
     def __init__(self, key=None):
         self.api_key = key
+        self.fields_types = {'gsid': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsrating': 'FLOAT'}
+        self.primary_key = 'gsid'
+        self.not_null_fields = ['gsid', 'zip_code', 'state', 'name']
+        self.table = 'TestGreatSchools'
+        # myan: initialize postgresql
         self.postgres = Postgresql(user_name='postgres',
                                    password='postgres',
                                    host='localhost',
                                    port='5432',
                                    db='TestProject')
-        # TODO: find a better and more generic way to parse the schema?
-        self.schema = '(gsid INT PRIMARY KEY NOT NULL, zip_code INT NOT NULL, state TEXT NOT NULL, name TEXT NOT NULL, gsrating FLOAT)'
-        self.fields = {'gsid': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsrating': 'FLOAT'}
-        self.primary_key = 'gsid'
-        self.not_null_fields = ['gsid', 'zip_code', 'state', 'name']
-        self.table = 'TestGreatSchools'
+        self.postgres.initialize_table(self.table, self.fields_types, self.primary_key, self.not_null_fields)
 
     def set_api_key(self, key=None):
         self.api_key = key
 
-    def run(self, db_result=None, **kwargs):
+    def run(self, **kwargs):
         # myan: seems python has a strange way of handling memory pointers when deleting elements from lists in a loop
         # therefore create a separate list tmp_results to hold all the results from API calls first and decide what to
         # include.
         tmp_results = self._nearby_schools(**kwargs)
         results = []
+        existing_keys = self.postgres.get("select gsid from {table};".format(table=self.table))
         for entry in tmp_results:
-            if len(db_result) < 1 or entry['gsid'] not in db_result['gsid'].values:
+            if len(existing_keys) < 1 or entry['gsid'] not in existing_keys['gsid'].values:
                 results.append(entry)
         self._push(results)
         return results
 
     def _push(self, data, batch_size=500):
-        self.postgres.initialize_table(self.table, self.schema)
-        fields_list = list(self.fields.keys())
+        fields_list = list(self.fields_types.keys())
         fields_to_push = self.postgres.construct_db_field_string(fields_list)
         start_idx = 0
         while start_idx < len(data):
             end_idx = min(len(data), start_idx + batch_size)
-            values_to_insert = self.postgres.parse_values_list(data, self.fields, fields_list)
+            values_to_insert = self.postgres.parse_values_list(data[start_idx:end_idx], self.fields_types, fields_list)
             start_idx = end_idx
             self.postgres.put(self.table, fields=fields_to_push, values=values_to_insert)
 

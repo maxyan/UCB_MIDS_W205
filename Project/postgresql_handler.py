@@ -1,6 +1,7 @@
 import pandas as pd
 import psycopg2
 
+
 class Postgresql:
     def __init__(self, user_name=None, password=None, host=None, port=None, db=None):
         self.user_name = user_name
@@ -30,16 +31,20 @@ class Postgresql:
             self.conn.rollback()
             return False
 
-    def initialize_table(self, table, schema, recreate=False):
+    def initialize_table(self, table, fields_types, primary_key, not_null_fields, recreate=False):
         self.connect()
         if not self._table_exists(table):
-            self.create_table(table, schema)
+            self.create_table(table, self.make_schema_string(fields_type=fields_types,
+                                                             primary_key=primary_key,
+                                                             not_null_fields=not_null_fields))
             return
         if recreate:
             self.drop_table(table)
-            self.create_table(table, schema)
+            self.create_table(table, self.make_schema_string(fields_type=fields_types,
+                                                             primary_key=primary_key,
+                                                             not_null_fields=not_null_fields))
 
-    def put(self, table, fields=None, values=None, keys=None, key_field=None,  update=False):
+    def put(self, table, fields=None, values=None, keys=None, key_field=None, update=False):
         """
         Puts data into the Postgresql database
         Args:
@@ -129,7 +134,7 @@ class Postgresql:
             field_list: list, optional, can be passed in to ensure that the values match the columns being pushed
 
         Returns:
-            insert_string: str, for insertting into db
+            insert_string: str, for inserting into db
         """
         insert_string = ''
         if field_list is None:
@@ -141,7 +146,7 @@ class Postgresql:
                     curr_string += 'NULL,'
                 else:
                     if fields[key] == 'TEXT':
-                        curr_string += "'" + str(entry[key]) + "',"
+                        curr_string += "'" + str(entry[key]).replace("'", "") + "',"
                     else:
                         curr_string += str(entry[key]) + ","
             curr_string = curr_string[:-1] + "),"

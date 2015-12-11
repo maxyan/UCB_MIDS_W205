@@ -1,9 +1,10 @@
 import pandas as pd
 
-def _request_api_data(request, db_result=None):
+
+def _request_api_data(request):
     api_configs = request['api_configs']
     api = api_configs['api'](api_configs['api_key'])
-    curr_result = api.run(db_result, **api_configs['api_args'])
+    curr_result = api.run(**api_configs['api_args'])
     return curr_result
 
 
@@ -53,12 +54,10 @@ class MissionControl:
                 pass
 
             curr_result = None
+            # TODO: this functionality still seems a bit buggy, refer to the notebook zipcode for details
             if request['api_configs']:
-                curr_result = _request_api_data(request, db_result=db_result)
+                curr_result = _request_api_data(request)
 
             total_results = db_result.append(pd.DataFrame(curr_result))
-            data.append(total_results) # myan: convert everything into pandas DataFrame
+            data.append(total_results)  # myan: convert everything into pandas DataFrame
         return data
-
-    def dispatch(self):
-        pass
