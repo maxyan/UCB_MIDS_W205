@@ -11,9 +11,9 @@ class ApiDataHandler:
     def process(self):
         pass
 
-    def push(self, mission_control=None, dynamodb=None, list_data=None):
-        if dynamodb:
-            self._push_to_dynamo(dynamodb, list_data=list_data)
+    def push(self, mission_control=None, postgres=None, list_data=None):
+        if postgres:
+            self._push_to_postgres(postgres, list_data=list_data)
 
         if mission_control:
             self._push_to_mission_control(mission_control, list_data=list_data)
@@ -22,7 +22,7 @@ class ApiDataHandler:
         if mission_control:
             pass
 
-    def _push_to_dynamo(self, dynamodb, list_data=None):
+    def _push_to_postgres(self, postgres, list_data=None):
         """
         Push data to dynamo db
         Args:
@@ -32,5 +32,5 @@ class ApiDataHandler:
         Returns:
             NULL
         """
-        for item in list_data:
-            dynamodb.add_data(**item)
+
+        postgres.put()

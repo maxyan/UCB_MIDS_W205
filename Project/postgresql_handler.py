@@ -1,23 +1,6 @@
 import pandas as pd
 import psycopg2
 
-
-def _construct_db_field_string(fields, add_quote=False):
-    if isinstance(fields, list):
-        fields_string = '('
-        for entry in fields:
-            if add_quote:
-                fields_string += ("'" + entry + "'" + ',')
-            else:
-                fields_string += (entry + ',')
-        fields_string = fields_string[:-1] + ')'
-    elif isinstance(fields, str):
-        fields_string = fields
-    else:
-        raise TypeError('Unsupported type for input arguyment "fields".')
-    return fields_string
-
-
 class Postgresql:
     def __init__(self, user_name=None, password=None, host=None, port=None, db=None):
         self.user_name = user_name
@@ -80,7 +63,7 @@ class Postgresql:
 
     def _update(self, table, fields, keys, values, key_field='id'):
         cur = self.conn.cursor()
-        fields_string = _construct_db_field_string(fields)
+        fields_string = self.construct_db_field_string(fields)
         for (key, value) in zip(keys, values):
             cur.execute("UPDATE {table} SET {fields}={values} WHERE {key_field}='{key}';".format(table=table,
                                                                                                  fields=fields_string,
@@ -90,7 +73,7 @@ class Postgresql:
         self.conn.commit()
 
     def _insert(self, table, fields, values):
-        fields_string = _construct_db_field_string(fields)
+        fields_string = self.construct_db_field_string(fields)
         cur = self.conn.cursor()
         cur.execute("INSERT INTO {table} {fields} VALUES {values};".format(table=table,
                                                                            fields=fields_string,
@@ -121,3 +104,46 @@ class Postgresql:
         cur.execute('''TRUNCATE TABLE {name};'''.format(name=table))
         cur.execute('''DROP TABLE {name};'''.format(name=table))
         self.conn.commit()
+
+    def construct_db_field_string(self, fields, add_quote=False):
+        if isinstance(fields, list):
+            fields_string = '('
+            for entry in fields:
+                if add_quote:
+                    fields_string += ("'" + entry + "'" + ',')
+                else:
+                    fields_string += (entry + ',')
+            fields_string = fields_string[:-1] + ')'
+        elif isinstance(fields, str):
+            fields_string = fields
+        else:
+            raise TypeError('Unsupported type for input arguyment "fields".')
+        return fields_string
+
+    def parse_values_list(self, data, fields, field_list=None):
+        """
+        Parse a list of dict into strings for batch insertion
+        Args:
+            data: list, [dict(key1=value1, key2=value2, ...), dict()]
+            fields: dict, {key: data_type}
+            field_list: list, optional, can be passed in to ensure that the values match the columns being pushed
+
+        Returns:
+            insert_string: str, for insertting into db
+        """
+        insert_string = ''
+        if field_list is None:
+            field_list = list(fields.keys())
+        for entry in data:
+            curr_string = "("
+            for key in field_list:
+                if key not in entry:
+                    curr_string += 'NULL,'
+                else:
+                    if fields[key] == 'TEXT':
+                        curr_string += "'" + str(entry[key]) + "',"
+                    else:
+                        curr_string += str(entry[key]) + ","
+            curr_string = curr_string[:-1] + "),"
+            insert_string += curr_string
+        return insert_string[:-1]

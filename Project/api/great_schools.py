@@ -1,23 +1,46 @@
 import requests
 from xml.etree import ElementTree
+from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
 
 GREAT_SCHOOL_API_KEY = "Your Key"
 
 
 class GreatSchools:
     """
-    This objects connects to the GreatSchools.org API and retrieves information about schools and GS ratings.
+    This object connects to the GreatSchools.org API and retrieves information about schools and GS ratings.
     See more information on: http://www.greatschools.org/api/docs/main.page
     """
 
     def __init__(self, key=None):
         self.api_key = key
+        self.postgres = Postgresql(user_name='postgres',
+                                   password='postgres',
+                                   host='localhost',
+                                   port='5432',
+                                   db='TestProject')
+        # TODO: find a better and more generic way to parse the schema?
+        self.schema = '(gsId INT PRIMARY KEY NOT NULL, zip_code INT NOT NULL, state TEXT NOT NULL, name TEXT NOT NULL, gsRating FLOAT)'
+        self.fields = {'gsId': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsRating': 'FLOAT'}
+        self.table = 'TestGreatSchools'
 
     def set_api_key(self, key=None):
         self.api_key = key
 
     def run(self, **kwargs):
-        return self._nearby_schools(**kwargs)
+        results = self._nearby_schools(**kwargs)
+        self.push(results)
+        return results
+
+    def push(self, data, batch_size=500):
+        self.postgres.initialize_table(self.table, self.schema)
+        fields_list = list(self.fields.keys())
+        fields_to_push = self.postgres.construct_db_field_string(fields_list)
+        start_idx = 0
+        while start_idx < len(data):
+            end_idx = min(len(data), start_idx + batch_size)
+            values_to_insert = self.postgres.parse_values_list(data, self.fields, fields_list)
+            start_idx = end_idx
+            self.postgres.put(self.table, fields=fields_to_push, values=values_to_insert)
 
     def _nearby_schools(self, state=None, zip_code=None, radius=5, limit=10):
         """
@@ -33,7 +56,7 @@ class GreatSchools:
 
         Examples:
             gs = GreatSchools(key='Your GS Key')
-            results = gs.nearby_schools(state='TX', zip_code=75228, limit=2)
+            results = gs._nearby_schools(state='TX', zip_code=75228, limit=2)
             # [{'gsId': '1769', 'gsRating': '3', 'name': 'Bryan Adams High School'}, {'gsId': '7566', 'name': 'White Rock Montessori School'}]
         """
         self._check_key()
@@ -44,10 +67,14 @@ class GreatSchools:
             radius=radius,
             limit=limit)
 
-        results = self._run(url, 'school', [(int(), 'gsId'), (None, 'name'), (float(), 'gsRating')])
+        results = self._run(url,
+                            key_string='school',
+                            result_fields=[(int, 'gsId'), (None, 'name'), (float, 'gsRating')],
+                            zip_code=zip_code,
+                            state=state)
         return results
 
-    def _run(self, url, key_string="school", result_fields=None):
+    def _run(self, url, key_string="school", result_fields=None, zip_code=None, state=None):
         """
         Generic method to extract data from API calls
         Args:
@@ -61,13 +88,13 @@ class GreatSchools:
         nearby = requests.get(url)
         results = []
         for school in ElementTree.fromstring(nearby.content).findall(key_string):
-            curr_result = dict()
+            curr_result = dict(zip_code=zip_code, state=state)
             try:
                 for (func, field) in result_fields:
-                    if func:
-                        curr_result[field] = func(school.find(field).text)
-                    else:
+                    if func is None:
                         curr_result[field] = school.find(field).text
+                    else:
+                        curr_result[field] = func(school.find(field).text)
             except:
                 pass
             if curr_result:

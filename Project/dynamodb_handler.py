@@ -125,7 +125,6 @@ class DynamoDb:
             self.write_capacity = table.provisioned_throughput['WriteCapacityUnits']
 
             if table.global_secondary_indexes and len(table.global_secondary_indexes) > 0:
-                # TODO: look into if we need to support multiple global secondary indexes?
                 entry = table.global_secondary_indexes[0]
                 self.global_secondary_index = entry['IndexName']
                 self.global_secondary_read_capacity = entry['ProvisionedThroughput']['ReadCapacityUnits']
