@@ -26,7 +26,7 @@ $ ./UCB_MIDS_W205/exercise_2/install_dependencies.sh
 
 
 3. Configure PostgresSQL
-./UCB_MIDS_W205/exercise_2/configure_postgres.sh
+$ ./UCB_MIDS_W205/exercise_2/configure_postgres.sh
 
 Create the table Tweetwordcount
 $ cd UCB_MIDS_W205/exercise_2
