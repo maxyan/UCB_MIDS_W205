@@ -10,6 +10,8 @@ class Postgresql:
         self.port = port
         self.db = db
         self.conn = None
+        self.table = None
+        self.connect()
 
     def connect(self):
         try:
@@ -33,6 +35,7 @@ class Postgresql:
 
     def initialize_table(self, table, fields_types, primary_key, not_null_fields, recreate=False):
         self.connect()
+        self.table = table
         if not self._table_exists(table):
             self.create_table(table, self.make_schema_string(fields_type=fields_types,
                                                              primary_key=primary_key,
@@ -43,6 +46,38 @@ class Postgresql:
             self.create_table(table, self.make_schema_string(fields_type=fields_types,
                                                              primary_key=primary_key,
                                                              not_null_fields=not_null_fields))
+
+    def put_dataframe(self, df, fields_types, table=None):
+        """
+        Push dataframe data into Postgresql db
+        Args:
+            df: pandas dataframe
+            fields_types: dict, {key:data_type, ...}
+            table (object):
+
+        Examples:
+            .put_dataframe(pd.DataFrame(),
+                           fields_type={'place_id': 'TEXT', 'city': 'TEXT', 'state': 'TEXT', 'population': 'INT',
+                                        'lat': 'FLOAT', 'lng': 'FLOAT'},
+                           table='TestMajorCities')
+        """
+        batch_size = 500
+        start_idx = 0
+
+        if table is None:
+            table = self.table
+        fields_list = list(fields_types.keys())
+        fields_to_push = self.construct_db_field_string(fields_list)
+
+        while start_idx < len(df):
+            end_idx = min(start_idx + batch_size, len(df))
+            print 'Processing {start} to {end}'.format(start=start_idx, end=end_idx)
+            curr_data = df[start_idx:end_idx]
+            curr_insert_string = self.parse_values_list(curr_data.to_dict('records'),
+                                                        fields_types,
+                                                        fields_list)
+            start_idx = end_idx
+            self.put(table, fields=fields_to_push, values=curr_insert_string)
 
     def put(self, table, fields=None, values=None, keys=None, key_field=None, update=False):
         """
@@ -100,6 +135,8 @@ class Postgresql:
         Examples:
             .create_table('test_zipcode', '(id TEXT PRIMARY KEY NOT NULL, median_price FLOAT, median_rent FLOAT)')
         """
+        if self.table is None:
+            self.table = table
         cur = self.conn.cursor()
         cur.execute('''CREATE TABLE {table} {schema};'''.format(table=table, schema=schema))
         self.conn.commit()
@@ -109,6 +146,7 @@ class Postgresql:
         cur.execute('''TRUNCATE TABLE {name};'''.format(name=table))
         cur.execute('''DROP TABLE {name};'''.format(name=table))
         self.conn.commit()
+        self.table = None
 
     def construct_db_field_string(self, fields, add_quote=False):
         if isinstance(fields, list):
