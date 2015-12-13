@@ -51,6 +51,7 @@ class Population:
         # include.
         tmp_results = self._geo_info(**kwargs)
         tmp_results = self._closest_city_population(tmp_results)
+        # TODO: finish pushing to database part
         # results = []
         # existing_keys = self.postgres.get("select place_id from {table};".format(table=self.table))
         # for entry in tmp_results:
