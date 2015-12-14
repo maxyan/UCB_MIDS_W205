@@ -139,7 +139,7 @@ class Plotter:
             self._get_all_months_timeseries()
         self._box_plot(values='median_price', normalize=True)
 
-    def plot_top_zipcode_schools(self):
+    def plot_top_zipcode_schools(self, selected_zip_codes=None):
         if self.top_zipcodes_timeseries is None:
             self._get_time_series_data()
         if self.top_zipcodes_school_data is None:
@@ -149,6 +149,9 @@ class Plotter:
                                                                on='zip_code',
                                                                lsuffix='',
                                                                rsuffix='_r')
+        fig = tools.make_subplots(rows=1,
+                                  cols=1,
+                                  subplot_titles=['Yield vs. School Rating'])
         trace1 = go.Scatter(x=top_results_school.gross_yield_pct.values.astype(float),
                             y=top_results_school.gsrating.values.astype(float),
                             mode='markers',
@@ -156,12 +159,19 @@ class Plotter:
                             marker=dict(size=10, color='green'),
                             text=top_results_school.zip_code.astype(
                                 str) + ', ' + top_results_school.county.values + ', ' + top_results_school.state.values)
-
-        fig = tools.make_subplots(rows=1,
-                                  cols=1,
-                                  subplot_titles=['Yield vs. School Rating'])
-
         fig.append_trace(trace1, 1, 1)
+
+        if selected_zip_codes:
+            selected_results = top_results_school.loc[top_results_school.zip_code.isin(selected_zip_codes)]
+            trace2 = go.Scatter(x=selected_results.gross_yield_pct.values.astype(float),
+                                y=selected_results.gsrating.values.astype(float),
+                                mode='markers',
+                                name='Top Return Zipcodes',
+                                marker=dict(size=10),
+                                text=selected_results.zip_code.astype(
+                                    str) + ', ' + selected_results.county.values + ', ' + selected_results.state.values)
+            fig.append_trace(trace2, 1, 1)
+
 
         # All of the axes properties here: https://plot.ly/python/reference/#XAxis
         fig['layout']['xaxis1'].update(title='Gross Yield (%)')

@@ -52,9 +52,9 @@ class Population:
         results_df = pd.DataFrame(self._closest_city_population(self._geo_info(**kwargs)))
         existing_keys = self.postgres.get("select place_id from {table};".format(table=self.table))
         addition_results = results_df.loc[np.logical_not(results_df['place_id'].isin(existing_keys['place_id'].values))]
-
+        addition_results.drop_duplicates(subset='place_id', inplace=True)
         if len(addition_results) > 0:
-            self.postgres.put_dataframe(results_df, self.table_config['field_types'], table=self.table)
+            self.postgres.put_dataframe(addition_results, self.table_config['fields_types'], table=self.table)
         return results_df
 
     def _geo_info(self, addresses=None, fields_to_get=('place_id', 'state', 'city', 'county', 'lat', 'lng')):
