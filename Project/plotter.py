@@ -172,7 +172,6 @@ class Plotter:
                                     str) + ', ' + selected_results.county.values + ', ' + selected_results.state.values)
             fig.append_trace(trace2, 1, 1)
 
-
         # All of the axes properties here: https://plot.ly/python/reference/#XAxis
         fig['layout']['xaxis1'].update(title='Gross Yield (%)')
 
@@ -198,13 +197,15 @@ class Plotter:
                             y=self.rest_zipcodes_timeseries.median_rent.values.astype(float),
                             mode='markers',
                             name='Rest',
-                            text=self.rest_zipcodes_timeseries.county.values)
+                            text=self.rest_zipcodes_timeseries.zip_code.astype(
+                                str) + ', ' + self.rest_zipcodes_timeseries.state)
 
         trace2 = go.Scatter(x=self.top_zipcodes_timeseries.median_price.values.astype(float),
                             y=self.top_zipcodes_timeseries.median_rent.values.astype(float),
                             mode='markers',
                             name='Top',
-                            text=self.top_zipcodes_timeseries.county.values)
+                            text=self.top_zipcodes_timeseries.zip_code.astype(
+                                str) + ', ' + self.top_zipcodes_timeseries.state)
 
         trace3 = go.Scatter(x=join_results.closest_city_population.values.astype(int),
                             y=join_results.gross_yield_pct.values.astype(float),

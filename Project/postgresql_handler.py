@@ -187,21 +187,21 @@ class Postgresql:
             insert_string += curr_string
         return insert_string[:-1]
 
-    def make_schema_string(self, fields_type=None, primary_key=None, not_null_fields=None):
+    def make_schema_string(self, fields_types=None, primary_key=None, not_null_fields=None):
         primary_is_not_null = False
         if primary_key in not_null_fields:
             not_null_fields.remove(primary_key)
             primary_is_not_null = True
 
         correct_sequence = [primary_key] + not_null_fields
-        for key in fields_type.keys():
+        for key in fields_types.keys():
             if key not in correct_sequence:
                 correct_sequence.append(key)
 
         schema_string = '('
         for entry in correct_sequence:
             schema_string += entry + ' '
-            schema_string += fields_type[entry] + ' '
+            schema_string += fields_types[entry] + ' '
             if entry == primary_key:
                 schema_string += 'PRIMARY KEY' + ' '
                 if primary_is_not_null:
