@@ -33,19 +33,15 @@ class Postgresql:
             self.conn.rollback()
             return False
 
-    def initialize_table(self, table, fields_types, primary_key, not_null_fields, recreate=False):
+    def initialize_table(self, table=None, recreate=False, **kwargs):
         self.connect()
         self.table = table
         if not self._table_exists(table):
-            self.create_table(table, self.make_schema_string(fields_type=fields_types,
-                                                             primary_key=primary_key,
-                                                             not_null_fields=not_null_fields))
+            self.create_table(table, self.make_schema_string(**kwargs))
             return
         if recreate:
             self.drop_table(table)
-            self.create_table(table, self.make_schema_string(fields_type=fields_types,
-                                                             primary_key=primary_key,
-                                                             not_null_fields=not_null_fields))
+            self.create_table(table, self.make_schema_string(**kwargs))
 
     def put_dataframe(self, df, fields_types, table=None):
         """
@@ -191,7 +187,7 @@ class Postgresql:
             insert_string += curr_string
         return insert_string[:-1]
 
-    def make_schema_string(self, fields_type, primary_key, not_null_fields):
+    def make_schema_string(self, fields_type=None, primary_key=None, not_null_fields=None):
         primary_is_not_null = False
         if primary_key in not_null_fields:
             not_null_fields.remove(primary_key)

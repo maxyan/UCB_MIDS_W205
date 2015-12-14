@@ -4,6 +4,7 @@ get the population for that location.
 """
 
 from UCB_MIDS_W205.Project.api.google_geo import GoogleGeo
+from UCB_MIDS_W205.Project.data_models import Datamodel
 from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
 from haversine import haversine
 import pandas as pd
@@ -21,17 +22,14 @@ class Population:
     """
 
     def __init__(self,recreate=False):
-        self.fields_types = {'place_id': 'TEXT', 'zip_code': 'INT', 'address': 'TEXT', 'county': 'TEXT', 'city': 'TEXT',
-                             'state': 'TEXT', 'closest_city': 'TEXT', 'closest_city_population': 'INT'}
-        self.primary_key = 'place_id'
-        self.not_null_fields = ['place_id', 'state']
-        self.table = 'TestPopulation'
+        datamodel = Datamodel()
+        self.table, self.table_config = datamodel.population()
         self.postgres = Postgresql(user_name='postgres',
                                    password='postgres',
                                    host='localhost',
                                    port='5432',
                                    db='TestProject')
-        self.postgres.initialize_table(self.table, self.fields_types, self.primary_key, self.not_null_fields,recreate=recreate)
+        self.postgres.initialize_table(self.table, recreate=False, **self.table_config)
         self.googlegeo = GoogleGeo()
 
         # myan: only get major cities data once per request
@@ -56,18 +54,8 @@ class Population:
         addition_results = results_df.loc[np.logical_not(results_df['place_id'].isin(existing_keys['place_id'].values))]
 
         if len(addition_results) > 0:
-            self.postgres.put_dataframe(results_df, self.fields_types, table=self.table)
+            self.postgres.put_dataframe(results_df, self.table_config['field_types'], table=self.table)
         return results_df
-
-    def _push(self, data, batch_size=500):
-        fields_list = list(self.fields_types.keys())
-        fields_to_push = self.postgres.construct_db_field_string(fields_list)
-        start_idx = 0
-        while start_idx < len(data):
-            end_idx = min(len(data), start_idx + batch_size)
-            values_to_insert = self.postgres.parse_values_list(data[start_idx:end_idx], self.fields_types, fields_list)
-            start_idx = end_idx
-            self.postgres.put(self.table, fields=fields_to_push, values=values_to_insert)
 
     def _geo_info(self, addresses=None, fields_to_get=('place_id', 'state', 'city', 'county', 'lat', 'lng')):
         """

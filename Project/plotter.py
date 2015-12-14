@@ -1,124 +1,235 @@
+import cufflinks as cf
+import numpy as np
+import pandas as pd
 import plotly
+import plotly.graph_objs as go
+from plotly import tools
+
+from UCB_MIDS_W205.Project.api.great_schools import GreatSchools
+from UCB_MIDS_W205.Project.api.population import Population
+from UCB_MIDS_W205.Project.data_models import Datamodel
+from UCB_MIDS_W205.Project.mission_control import MissionControl
+from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
 
 print(plotly.__version__)  # version 1.9.x required
 plotly.offline.init_notebook_mode()  # run at the start of every notebook
-
-from plotly import tools
-import plotly.plotly as py
-import plotly.graph_objs as go
-import cufflinks as cf
-import pandas as pd
-
 cf.set_config_file(offline=True, world_readable=False)
 
 
-def process_fields(data_dict):
-    for key in data_dict.keys():
-        if 'median_rent' in data_dict[key].columns and 'median_price' in data_dict[key].columns:
-            data_dict[key]['gross_yield_pct'] = data_dict[key]['median_rent'] * 12 / data_dict[key][
-                'median_price'] * 100
-            data_dict[key] = data_dict[key].sort('gross_yield_pct', ascending=False)
-    return data_dict
+class Plotter:
+    def __init__(self, min_price=150000, max_price=300000, top_percentage=0.25, top_max_num_entries=30):
+        self.MIN_PRICE = min_price
+        self.MAX_PRICE = max_price
+        self.TOP_PERCENTAGE = top_percentage
+        self.TOP_MAX_NUM_ENTRIES = top_max_num_entries
 
+        datamodel = Datamodel()
+        self.time_series_postgres = self._initialize_postgres(datamodel.zipcode_timeseries())
+        self.population_postgres = self._initialize_postgres(datamodel.population())
+        self.great_schools_postgres = self._initialize_postgres(datamodel.great_schools())
 
-def join(this, other, on=None):
-    return pd.merge(this, other, left_on=on, right_on=on)
+        self.zipcode_timeseries = None
+        self.top_zipcodes_timeseries = None
+        self.rest_zipcodes_timeseries = None
+        self.top_zipcodes_school_data = None
+        self.top_zipcodes_population_data = None
+        self.all_months_timeseries = None
 
+    def reset(self):
+        self.zipcode_timeseries = None
+        self.top_zipcodes_timeseries = None
+        self.rest_zipcodes_timeseries = None
+        self.top_zipcodes_school_data = None
+        self.top_zipcodes_population_data = None
+        self.all_months_timeseries = None
 
-def split(data, top_pct=20, max_num_of_entries=25):
-    top_index = min(int(len(data) * top_pct), max_num_of_entries)
-    return [data[:top_index], data[top_index:]]
+    def _get_time_series_data(self, year_month=201510):
+        suitable_states = self.time_series_postgres.get(
+            "select * from {table} where year_month={year_month} and median_price < {max_price} and median_price > {min_price}".format(
+                table=self.time_series_postgres.table,
+                year_month=year_month,
+                max_price=self.MAX_PRICE,
+                min_price=self.MIN_PRICE))
 
+        suitable_states['gross_yield_pct'] = suitable_states.median_rent * 12 / suitable_states.median_price * 100
+        suitable_states = suitable_states.sort('gross_yield_pct', ascending=False)
+        top_index = min(int(len(suitable_states) * self.TOP_PERCENTAGE), self.TOP_MAX_NUM_ENTRIES)
 
-class Summarizer:
-    def __init__(self, data=None, **kwargs):
-        """
-        Args:
-            data: dict, {main: main_data, population: population_data, ...}
-            **kwargs:
+        self.zipcode_timeseries = suitable_states
+        self.top_zipcodes_timeseries = suitable_states[:top_index]
+        self.rest_zipcodes_timeseries = suitable_states[top_index:]
 
-        Returns:
+    def _get_population_data(self):
+        if self.top_zipcodes_timeseries is None:
+            self._get_time_series_data()
+        p = Population(recreate=False)
+        self.top_zipcodes_population_data = p.run(addresses=self.top_zipcodes_timeseries.zip_code.values)
 
-        """
-        self.data = process_fields(data)
-        self.configs = dict()
-        self._update_configs(**kwargs)
+    def _get_top_zipcodes_school_data(self):
+        all_states = self.top_zipcodes_timeseries.state.values
+        all_zipcodes = self.top_zipcodes_timeseries.zip_code.values
+        unique_states = self.top_zipcodes_timeseries.state.unique()
 
-    def reset(self, data=None, **kwargs):
-        if data is not None:
-            self.data = process_fields(data)
-        self._update_configs(**kwargs)
+        requests = []
+        for state in unique_states:
+            unique_zipcodes = np.unique(all_zipcodes[all_states == state])
+            for zip_code in unique_zipcodes:
+                requests.append(dict(db_configs=dict(postgres=self.great_schools_postgres,
+                                                     query="select * from {table} where state='{state}' and zip_code={zip_code};".format(
+                                                         table=self.great_schools_postgres.table,
+                                                         state=state,
+                                                         zip_code=zip_code)),
+                                     api_configs=dict(api=GreatSchools,
+                                                      api_key=None,
+                                                      api_args=dict(state=state, zip_code=zip_code, limit=20)
+                                                      )
+                                     )
+                                )
+        mission_control = MissionControl()
+        gs_data = mission_control.request_data(user_requests=requests)
+        gs_data_df = pd.DataFrame()
+        for entry in gs_data:
+            gs_data_df = gs_data_df.append(entry)
+        self.top_zipcodes_school_data = pd.DataFrame(gs_data_df.groupby('zip_code')['gsrating'].mean())
+        self.top_zipcodes_school_data['zip_code'] = self.top_zipcodes_school_data.index
 
-    def plot_scatters(self, requirements=None):
-        """
-        A scatter plot (subplots) for the current data.
-        Args:
-            requirements: list of dicts, [dict(x=str, y=str, data=str, name=str, text_field=str, split=list, join=boolean, join_left=str, join_right=str, join_on=str, size=int)]
+    def _initialize_postgres(self, (table, config)):
+        postgres = Postgresql(user_name='postgres', password='postgres', host='localhost', port='5432',
+                              db='TestProject')
+        postgres.initialize_table(table, recreate=False, **config)
+        return postgres
 
-        Returns:
+    def plot_zipcode_yield_fluctuation(self):
+        if self.top_zipcodes_timeseries is None:
+            self._get_time_series_data()
+        if self.all_months_timeseries is None:
+            self._get_all_months_timeseries()
+        self._box_plot(values='gross_yield_pct', normalize=False)
 
-        """
+    def _box_plot(self, values=None, normalize=False):
+        ts_pivot = self.all_months_timeseries.pivot(index='year_month', columns='key', values=values)
+        ts_pivot = ts_pivot.T
+        if normalize:
+            ts_pivot['fluctuation'] = (ts_pivot.max(axis=1) - ts_pivot.min(axis=1)) / ts_pivot.max(axis=1)
+        else:
+            ts_pivot['fluctuation'] = ts_pivot.max(axis=1) - ts_pivot.min(axis=1)
+        ts_pivot = ts_pivot.sort('fluctuation').drop('fluctuation', axis=1)
+        ts_pivot.T.iplot(kind='box', filename='cufflinks/box-plots',
+                         title='Fluctuations of {field} - Top Zipcodes'.format(field=values))
 
-        num_of_plots = len(requirements)
-        nrows = int((num_of_plots + 1) / 2)
-        ncols = min(int(num_of_plots / nrows), 2)
+    def _get_all_months_timeseries(self):
+        self.all_months_timeseries = self.time_series_postgres.get(
+            "select * from {table} where zip_code in {zip_codes};".format(table=self.time_series_postgres.table,
+                                                                          zip_codes=str(
+                                                                              tuple(
+                                                                                  self.top_zipcodes_timeseries.zip_code.values))))
+        self.all_months_timeseries[
+            'gross_yield_pct'] = self.all_months_timeseries.median_rent * 12 / self.all_months_timeseries.median_price * 100
+        self.all_months_timeseries['key'] = self.all_months_timeseries['zip_code'].astype(str) + ', ' + \
+                                            self.all_months_timeseries['state']
+        self.all_months_timeseries = self.all_months_timeseries[
+            ['key', 'gross_yield_pct', 'median_price', 'year_month']]
+        self.all_months_timeseries['gross_yield_pct'] = self.all_months_timeseries['gross_yield_pct'].values.astype(
+            float)
 
-        traces = []
-        titles = []
-        for item in requirements:
-            titles.append(item['x'] + ' vs. ' + item['y'])
-            if 'text_field' not in item:
-                item['text_field'] = item['join_on']
+    def plot_zipcode_price_fluctuation(self):
+        if self.top_zipcodes_timeseries is None:
+            self._get_time_series_data()
+        if self.all_months_timeseries is None:
+            self._get_all_months_timeseries()
+        self._box_plot(values='median_price', normalize=True)
 
-            if 'join' in item and item['join']:
-                joined = join(self.data[item['join_left']], self.data[item['join_right']], on=item['join_on'])
-                params = dict(x=joined[item['x']].values.astype(int),
-                              y=joined[item['y']].values.astype(float),
-                              name=item['name'],
-                              mode='markers',
-                              text=joined.county.values)
-                if 'size' in item:
-                    params.update(marker=dict(size=item['size']))
-                traces.append(go.Scatter(**params))
+    def plot_top_zipcode_schools(self):
+        if self.top_zipcodes_timeseries is None:
+            self._get_time_series_data()
+        if self.top_zipcodes_school_data is None:
+            self._get_top_zipcodes_school_data()
 
-            elif 'split' in item and len(item['split']) > 1:
-                split_data_list = split(self.data[item['data']],
-                                        top_pct=self.configs['top_percentage'],
-                                        max_num_of_entries=self.configs['max_num_of_entries'])
-                for entry, name in zip(split_data_list, item['split']):
-                    traces.append(go.Scatter(x=entry[item['data']][item['x']].values.astype(float),
-                                             y=entry[item['data']][item['y']].values.astype(float),
-                                             mode='markers',
-                                             name=name,
-                                             text=entry[item['data']][item['text_field']].values))
+        top_results_school = self.top_zipcodes_timeseries.join(self.top_zipcodes_school_data,
+                                                               on='zip_code',
+                                                               lsuffix='',
+                                                               rsuffix='_r')
+        trace1 = go.Scatter(x=top_results_school.gross_yield_pct.values.astype(float),
+                            y=top_results_school.gsrating.values.astype(float),
+                            mode='markers',
+                            name='Top Return Zipcodes',
+                            marker=dict(size=10, color='green'),
+                            text=top_results_school.zip_code.astype(
+                                str) + ', ' + top_results_school.county.values + ', ' + top_results_school.state.values)
 
-            else:
-                traces.append(go.Scatter(x=self.data[item['data']][item['x']].values.astype(float),
-                                         y=self.data[item['data']][item['y']].values.astype(float),
-                                         mode='markers',
-                                         name=item['name'],
-                                         text=self.data[item['data']][item['text_field']].values))
+        fig = tools.make_subplots(rows=1,
+                                  cols=1,
+                                  subplot_titles=['Yield vs. School Rating'])
 
-        fig = tools.make_subplots(rows=nrows, cols=ncols, subplot_titles=titles)
+        fig.append_trace(trace1, 1, 1)
 
-        for trace in traces:
-            fig.append_trace(trace, 1, 1)
+        # All of the axes properties here: https://plot.ly/python/reference/#XAxis
+        fig['layout']['xaxis1'].update(title='Gross Yield (%)')
+
+        # All of the axes properties here: https://plot.ly/python/reference/#YAxis
+        fig['layout']['yaxis1'].update(title='Average School Rating')
+        plotly.offline.iplot(fig)
+
+    def plot_zipcode_overview(self, selected_zip_codes=None):
+        if self.top_zipcodes_timeseries is None:
+            self._get_time_series_data()
+        if self.top_zipcodes_population_data is None:
+            self._get_population_data()
+
+        join_results = pd.merge(self.top_zipcodes_timeseries,
+                                self.top_zipcodes_population_data,
+                                left_on='zip_code',
+                                right_on='zip_code',
+                                suffixes=('_l', '_r'))
+        join_results['key'] = join_results['zip_code'].astype(str) + ', ' + join_results['closest_city'].astype(str)
+        join_results = join_results.loc[join_results.closest_city != 'NULL']
+
+        trace1 = go.Scatter(x=self.rest_zipcodes_timeseries.median_price.values.astype(float),
+                            y=self.rest_zipcodes_timeseries.median_rent.values.astype(float),
+                            mode='markers',
+                            name='Rest',
+                            text=self.rest_zipcodes_timeseries.county.values)
+
+        trace2 = go.Scatter(x=self.top_zipcodes_timeseries.median_price.values.astype(float),
+                            y=self.top_zipcodes_timeseries.median_rent.values.astype(float),
+                            mode='markers',
+                            name='Top',
+                            text=self.top_zipcodes_timeseries.county.values)
+
+        trace3 = go.Scatter(x=join_results.closest_city_population.values.astype(int),
+                            y=join_results.gross_yield_pct.values.astype(float),
+                            name='Population',
+                            mode='markers',
+                            marker=dict(size=10),
+                            text=join_results.key.values)
+
+        if selected_zip_codes:
+            selected_results = join_results.loc[join_results.zip_code.isin(selected_zip_codes)]
+            trace4 = go.Scatter(x=selected_results['closest_city_population'].values.astype(int),
+                                y=selected_results['gross_yield_pct'].values.astype(float),
+                                name='Population - Selected Zipcodes',
+                                mode='markers',
+                                marker=dict(size=10),
+                                text=selected_results.key.values)
+
+        fig = tools.make_subplots(rows=1,
+                                  cols=2,
+                                  subplot_titles=['Price vs. Rent',
+                                                  'Yield vs. Population - Top Zipcodes'])
+
+        fig.append_trace(trace1, 1, 1)
         fig.append_trace(trace2, 1, 1)
         fig.append_trace(trace3, 1, 2)
+        if selected_zip_codes:
+            fig.append_trace(trace4, 1, 2)
 
         # All of the axes properties here: https://plot.ly/python/reference/#XAxis
         fig['layout']['xaxis1'].update(title='Median Price $')
-        fig['layout']['xaxis2'].update(title='County Population', type='log')
+        fig['layout']['xaxis2'].update(title='Population of closest major city', type='log')
 
         # All of the axes properties here: https://plot.ly/python/reference/#YAxis
         fig['layout']['yaxis1'].update(title='Median Monthly Rent')
-        fig['layout']['yaxis2'].update(title='Gross Yield (%)')  # , range=[40, 80])
+        fig['layout']['yaxis2'].update(title='Gross Yield (%)')
 
-        fig['layout'].update(title='Visualizing County Returns')
+        fig['layout'].update(title='Visualizing Zipcode Returns')
         plotly.offline.iplot(fig)
-
-    def plot_time_series(self, hash_key, plot_field=None):
-        pass
-
-    def _update_configs(self, **kwargs):
-        self.configs.update(**kwargs)

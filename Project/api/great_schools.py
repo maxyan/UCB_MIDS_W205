@@ -1,10 +1,20 @@
+import csv
 from xml.etree import ElementTree
 
 import requests
 
+from UCB_MIDS_W205.Project.data_models import Datamodel
 from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
 
 GREAT_SCHOOL_API_KEY = "Your Key"
+DEFAULT_API_KEY_PATH = '/home/myan/API_Keys/great_school.csv'
+
+
+def _get_great_schools_api_key():
+    with open(DEFAULT_API_KEY_PATH) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            return row['value']
 
 
 class GreatSchools:
@@ -14,18 +24,19 @@ class GreatSchools:
     """
 
     def __init__(self, key=None):
-        self.api_key = key
-        self.fields_types = {'gsid': 'INT', 'zip_code': 'INT', 'state': 'TEXT', 'name': 'TEXT', 'gsrating': 'FLOAT'}
-        self.primary_key = 'gsid'
-        self.not_null_fields = ['gsid', 'zip_code', 'state', 'name']
-        self.table = 'TestGreatSchools'
+        if key is None:
+            self.api_key = _get_great_schools_api_key()
+        else:
+            self.api_key = key
         # myan: initialize postgresql
+        datamodel = Datamodel()
+        self.table, self.table_config = datamodel.great_schools()
         self.postgres = Postgresql(user_name='postgres',
                                    password='postgres',
                                    host='localhost',
                                    port='5432',
                                    db='TestProject')
-        self.postgres.initialize_table(self.table, self.fields_types, self.primary_key, self.not_null_fields)
+        self.postgres.initialize_table(self.table, recreate=False, **self.table_config)
 
     def set_api_key(self, key=None):
         self.api_key = key
@@ -44,12 +55,14 @@ class GreatSchools:
         return results
 
     def _push(self, data, batch_size=500):
-        fields_list = list(self.fields_types.keys())
+        fields_list = list(self.table_config['fields_types'].keys())
         fields_to_push = self.postgres.construct_db_field_string(fields_list)
         start_idx = 0
         while start_idx < len(data):
             end_idx = min(len(data), start_idx + batch_size)
-            values_to_insert = self.postgres.parse_values_list(data[start_idx:end_idx], self.fields_types, fields_list)
+            values_to_insert = self.postgres.parse_values_list(data[start_idx:end_idx],
+                                                               self.table_config['fields_types'],
+                                                               fields_list)
             start_idx = end_idx
             self.postgres.put(self.table, fields=fields_to_push, values=values_to_insert)
 

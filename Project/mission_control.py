@@ -54,7 +54,6 @@ class MissionControl:
                 pass
 
             curr_result = None
-            # TODO: this functionality still seems a bit buggy, refer to the notebook zipcode for details
             if request['api_configs']:
                 curr_result = _request_api_data(request)
 
