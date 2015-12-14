@@ -6,6 +6,8 @@ get the population for that location.
 from UCB_MIDS_W205.Project.api.google_geo import GoogleGeo
 from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
 from haversine import haversine
+import pandas as pd
+import numpy as np
 
 # myan: the zip_code should not be more than 80km (approximately) away from a major city
 # which is approximately 40 minutes drive
@@ -18,8 +20,8 @@ class Population:
     See more information on: http://www.greatschools.org/api/docs/main.page
     """
 
-    def __init__(self):
-        self.fields_types = {'place_id': 'TEXT', 'zip_code': 'INT', 'county': 'TEXT', 'city': 'TEXT',
+    def __init__(self,recreate=False):
+        self.fields_types = {'place_id': 'TEXT', 'zip_code': 'INT', 'address': 'TEXT', 'county': 'TEXT', 'city': 'TEXT',
                              'state': 'TEXT', 'closest_city': 'TEXT', 'closest_city_population': 'INT'}
         self.primary_key = 'place_id'
         self.not_null_fields = ['place_id', 'state']
@@ -29,7 +31,7 @@ class Population:
                                    host='localhost',
                                    port='5432',
                                    db='TestProject')
-        self.postgres.initialize_table(self.table, self.fields_types, self.primary_key, self.not_null_fields)
+        self.postgres.initialize_table(self.table, self.fields_types, self.primary_key, self.not_null_fields,recreate=recreate)
         self.googlegeo = GoogleGeo()
 
         # myan: only get major cities data once per request
@@ -49,16 +51,13 @@ class Population:
         # myan: seems python has a strange way of handling memory pointers when deleting elements from lists in a loop
         # therefore create a separate list tmp_results to hold all the results from API calls first and decide what to
         # include.
-        tmp_results = self._geo_info(**kwargs)
-        tmp_results = self._closest_city_population(tmp_results)
-        # TODO: finish pushing to database part
-        # results = []
-        # existing_keys = self.postgres.get("select place_id from {table};".format(table=self.table))
-        # for entry in tmp_results:
-        #     if len(existing_keys) < 1 or entry['gsid'] not in existing_keys['gsid'].values:
-        #         results.append(entry)
-        # # self._push(results)
-        return tmp_results
+        results_df = pd.DataFrame(self._closest_city_population(self._geo_info(**kwargs)))
+        existing_keys = self.postgres.get("select place_id from {table};".format(table=self.table))
+        addition_results = results_df.loc[np.logical_not(results_df['place_id'].isin(existing_keys['place_id'].values))]
+
+        if len(addition_results) > 0:
+            self.postgres.put_dataframe(results_df, self.fields_types, table=self.table)
+        return results_df
 
     def _push(self, data, batch_size=500):
         fields_list = list(self.fields_types.keys())
@@ -89,7 +88,9 @@ class Population:
         results = []
         for entry in addresses:
             output = self.googlegeo.get(entry, fields_to_get=fields_to_get)
-            output.update(address=entry)
+            output.update(address=str(entry))
+            if isinstance(entry, int):
+                output.update(zip_code=entry)
             results.append(output)
         return results
 
