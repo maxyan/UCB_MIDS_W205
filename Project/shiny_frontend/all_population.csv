@@ -1,0 +1,41 @@
+,place_id,state,county,city,closest_city,address,closest_city_population,zip_code
+0,ChIJ87WgIEYd2YgRDAXN1gZ2P5o,FL,Broward County,Pompano Beach,"Pompano Beach city, Florida",33064,103040.0,33064
+1,ChIJI1HRm2QGD4gRQEegUSXygKo,IL,None,Elgin,"Elgin city, Illinois",60120,110603.0,60120
+2,ChIJ64O9oikE2YgRLoKSCPbZfnE,FL,Broward County,Fort Lauderdale,"Coral Springs city, Florida",33319,125170.0,33319
+3,ChIJcygOtQlh2oARJBSUa5bv-BM,CA,Riverside County,Indio,NULL,92201,,92201
+4,ChIJeTXHuObf2IgRtuZNdBpkk2U,FL,Palm Beach County,Delray Beach,"Pompano Beach city, Florida",33444,103040.0,33444
+5,ChIJzds_JNne2IgRMrR7PQUpMIE,FL,Palm Beach County,Boynton Beach,"West Palm Beach city, Florida",33435,101715.0,33435
+6,ChIJ-zdl1l6u2YgRKQGHWtzZvtk,FL,None,Miami,"Miami Gardens city, Florida",33169,110703.0,33169
+7,ChIJQyWuhMtbDogRAV3otg8mJFM,IL,None,Bolingbrook,"Naperville city, Illinois",60440,143940.0,60440
+8,ChIJMZhgVYzY2IgR_5pl_7cOEK0,FL,Palm Beach County,Lake Worth,"West Palm Beach city, Florida",33462,101715.0,33462
+9,ChIJe4pyK7Tc2YgR3EeONqebG4c,FL,Miami-Dade County,Homestead,"Miami city, Florida",33032,414144.0,33032
+10,ChIJ-SwFz5XvDogRJeEOunSo72c,IL,None,Montgomery,"Aurora city, Illinois",60538,198312.0,60538
+11,ChIJ37UlbXdBw4gRD1I3lFMtvvg,FL,Sarasota County,Sarasota,"St. Petersburg city, Florida",34231,247742.0,34231
+12,ChIJvcqJyc7W2YgRfB9L5uGJUtk,FL,Miami-Dade County,Homestead,"Miami city, Florida",33033,414144.0,33033
+13,ChIJk4w7Ik0ByIkRNDyb0n4rX8M,MD,None,Baltimore,"Baltimore city, Maryland",21224,621836.0,21224
+14,ChIJXVPQv8qu2YgR1robHsFvuVs,FL,None,Hollywood,"Miami Gardens city, Florida",33023,110703.0,33023
+15,ChIJy_Gy6omr2YgR7CQxADLeRTk,FL,None,Hallandale Beach,"Hollywood city, Florida",33009,145092.0,33009
+16,ChIJ614d0Fl8P4YRBc2tYL_yLMI,TX,None,Dickinson,"Pasadena city, Texas",77539,152030.0,77539
+17,ChIJH8EPNdPtQIYRIi-NXVCFNIU,TX,None,Fresno,"Houston city, Texas",77545,2162268.0,77545
+18,ChIJBy03FGko2YgRwUUYs-z-ink,FL,Palm Beach County,West Palm Beach,"West Palm Beach city, Florida",33415,101715.0,33415
+19,ChIJASBlG9ut2YgRz6SigSPUW1I,FL,Miami-Dade County,Miami,"Miami Gardens city, Florida",33162,110703.0,33162
+20,ChIJYZa3RcSIToYR0ee3jiSs544,TX,None,Grand Prairie,"Grand Prairie city, Texas",75052,181209.0,75052
+21,ChIJbzqFHRXOQIYRRffSh7YWHMw,TX,Harris County,Houston,"Houston city, Texas",77064,2162268.0,77064
+22,ChIJA0SdMADE2YgR32BvuWSlEPI,FL,Miami-Dade County,Miami,"Miami city, Florida",33157,414144.0,33157
+23,ChIJb-uvhGYvQYYR2cVIUdC-RtY,TX,None,Katy,"Houston city, Texas",77493,2162268.0,77493
+24,ChIJDUHYODPY2IgRCKbnN5MTwf4,FL,Palm Beach County,Lake Worth,"West Palm Beach city, Florida",33460,101715.0,33460
+25,ChIJmyaPpEbf2IgRhoK1-x-ELcU,FL,Palm Beach County,Boynton Beach,"West Palm Beach city, Florida",33426,101715.0,33426
+26,ChIJvVnLzvEG2YgREFEg1iO-2UM,FL,Broward County,Fort Lauderdale,"Fort Lauderdale city, Florida",33313,170600.0,33313
+27,ChIJAVNSd6cn2YgRFvwVru8Y-Ck,FL,Palm Beach County,Lake Worth,"West Palm Beach city, Florida",33463,101715.0,33463
+28,ChIJbYqbCTij2YgR8viXPBNM-uA,FL,None,Hialeah,"Miramar city, Florida",33018,128016.0,33018
+29,ChIJDwghjNMD2YgRP-JeFuzPs64,FL,Broward County,Fort Lauderdale,"Pompano Beach city, Florida",33309,103040.0,33309
+30,ChIJc-188O4e24gRp8ej78xgs8I,FL,Collier County,Naples,"Cape Coral city, Florida",34108,161692.0,34108
+31,ChIJs8W11T0FD4gRPUqA1ZtXra4,IL,Kane County,Elgin,"Elgin city, Illinois",60123,110603.0,60123
+32,ChIJ_8Ya1zk6DogRrGIF7FuSbH0,IL,Cook County,Oak Lawn,"Chicago city, Illinois",60453,2711992.0,60453
+33,ChIJExbeIIwF2YgRKXr02DwSzdI,FL,None,Fort Lauderdale,"Coral Springs city, Florida",33321,125170.0,33321
+34,ChIJWQuXABGKDogRYmjDXz2lrr0,IL,None,Joliet,"Joliet city, Illinois",60431,147738.0,60431
+35,ChIJUzpQa8pqzCsR4Ef2fDv2ABw,WA,None,None,NULL,6606,,6606
+36,ChIJfwsNi98YTIYRhIaUiuugL10,TX,Collin County,Plano,"Plano city, Texas",75074,271135.0,75074
+37,ChIJiS96BHcHD4gRyRvG76Zewjc,IL,Cook County,Streamwood,"Elgin city, Illinois",60107,110603.0,60107
+38,ChIJBZgUSsvo3ogRrJcbGYkcUOU,FL,St. Lucie County,Port Saint Lucie,"Port St. Lucie city, Florida",34984,169051.0,34984
+39,ChIJHTLNem7SQIYR_w1OKk0o6Mg,TX,Harris County,Houston,"Houston city, Texas",77070,2162268.0,77070
