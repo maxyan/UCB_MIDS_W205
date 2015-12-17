@@ -98,23 +98,25 @@ class Postgresql:
             self._insert(table, fields, values)
 
     def _update(self, table, fields, keys, values, key_field='id'):
-        cur = self.conn.cursor()
-        fields_string = self.construct_db_field_string(fields)
-        for (key, value) in zip(keys, values):
-            cur.execute("UPDATE {table} SET {fields}={values} WHERE {key_field}='{key}';".format(table=table,
-                                                                                                 fields=fields_string,
-                                                                                                 values=value,
-                                                                                                 key_field=key_field,
-                                                                                                 key=key))
-        self.conn.commit()
+        if keys and values:
+            cur = self.conn.cursor()
+            fields_string = self.construct_db_field_string(fields)
+            for (key, value) in zip(keys, values):
+                cur.execute("UPDATE {table} SET {fields}={values} WHERE {key_field}='{key}';".format(table=table,
+                                                                                                     fields=fields_string,
+                                                                                                     values=value,
+                                                                                                     key_field=key_field,
+                                                                                                     key=key))
+            self.conn.commit()
 
     def _insert(self, table, fields, values):
-        fields_string = self.construct_db_field_string(fields)
-        cur = self.conn.cursor()
-        cur.execute("INSERT INTO {table} {fields} VALUES {values};".format(table=table,
-                                                                           fields=fields_string,
-                                                                           values=values))
-        self.conn.commit()
+        if values:
+            fields_string = self.construct_db_field_string(fields)
+            cur = self.conn.cursor()
+            cur.execute("INSERT INTO {table} {fields} VALUES {values};".format(table=table,
+                                                                               fields=fields_string,
+                                                                               values=values))
+            self.conn.commit()
 
     def get(self, query):
         df = pd.read_sql(query, self.conn)

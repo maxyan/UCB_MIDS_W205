@@ -20,7 +20,6 @@ class MissionControl:
                 db_configs - dict(postgres=Postgresql, query=string)
                 api_configs - dict(api, api_key, **conditions)
 
-        Returns:
         Examples:
             The scripts below initializes a mission control to load time series and school infomration on a zipcode level.
 

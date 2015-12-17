@@ -1,3 +1,5 @@
+import pdb
+
 import pandas as pd
 from UCB_MIDS_W205.Project.data_models import Datamodel
 from UCB_MIDS_W205.Project.postgresql_handler import Postgresql
@@ -33,15 +35,14 @@ class ZillowDataHandler:
         return data
 
     def parse_and_push(self):
-        # TODO: latest_year_month should be used more gracefully.
         latest_year_month = self.time_series_postgres.get(
-            "select max(year_month) from {table};".format(table=self.time_series_postgres.table))
+            "select max(year_month) from {table};".format(table=self.time_series_postgres.table))['max'].values[0]
 
         prices = self._parse('/home/myan/Downloads/Zillow_Data/Zip_Zhvi_SingleFamilyResidence.csv')
         rent = self._parse('/home/myan/Downloads/Zillow_Data/Zip_MedianRentalPrice_Sfr.csv')
 
-        self._push_price(prices)
-        self._update_rent(rent)
+        self._push_price(prices, latest_year_month)
+        self._update_rent(rent, latest_year_month)
 
     def _parse(self, path):
         data = pd.read_csv(path)
@@ -52,21 +53,21 @@ class ZillowDataHandler:
         data = data.set_index('key')
         return data
 
-    def _push_price(self, data):
+    def _push_price(self, data, latest_year_month=None):
         batch_size = 500
         start_idx = 0
         while start_idx < len(data):
             end_idx = min(start_idx + batch_size, len(data))
             print 'Processing {start} to {end}'.format(start=start_idx, end=end_idx)
             curr_data = data[start_idx:end_idx]
-            curr_insert_string = self._convert_into_insert_values(curr_data)
+            curr_insert_string = self._convert_into_insert_values(curr_data, latest_year_month)
             start_idx = end_idx
             self.time_series_postgres.put(self.time_series_postgres.table,
                                           fields='(id, zip_code, county, state, year_month, median_price)',
                                           values=curr_insert_string)
 
-    def _update_rent(self, data):
-        key_strings, value_strings = self._convert_into_update_values(data)
+    def _update_rent(self, data, latest_year_month=None):
+        key_strings, value_strings = self._convert_into_update_values(data, latest_year_month)
         self.time_series_postgres.put('TestZipcodeTS',
                                       keys=key_strings,
                                       values=value_strings,
@@ -74,7 +75,7 @@ class ZillowDataHandler:
                                       update=True,
                                       key_field='id')
 
-    def _convert_into_insert_values(self, data):
+    def _convert_into_insert_values(self, data, latest_year_month=None):
         insert_string = ''
         for (k, v) in data.T.to_dict().items():
             zip_code = v['RegionName']
@@ -83,16 +84,21 @@ class ZillowDataHandler:
             for key in v.keys():
                 if key in ('RegionName', 'CountyName', 'State'):
                     continue
+                if key.isdigit() and latest_year_month is not None and int(key) <= latest_year_month:
+                    continue
+
                 insert_string += "('" + (k + '_' + key) + "', " + str(zip_code) + ", '" + county + "', '" + state + \
                                  "'," + key + ", " + self._nan_to_null(v[key]) + "),"
         return insert_string[:-1]
 
-    def _convert_into_update_values(self, data):
+    def _convert_into_update_values(self, data, latest_year_month=None):
         value_strings = []
         key_strings = []
         for (k, v) in data.T.to_dict().items():
             for key in v.keys():
                 if key in ('RegionName', 'CountyName', 'State'):
+                    continue
+                if key.isdigit() and latest_year_month is not None and int(key) <= latest_year_month:
                     continue
                 value_strings.append('(' + self._nan_to_null(v[key]) + ')')
                 key_strings.append((k + '_' + key))

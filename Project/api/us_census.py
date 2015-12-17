@@ -3,7 +3,7 @@ import requests
 import us
 import sys
 
-sys.path.append('/home/myan/repos/') # TODO: change this
+sys.path.append('/home/myan/repos/')
 from UCB_MIDS_W205.Project.api_data_handler import ApiDataHandler
 from UCB_MIDS_W205.Project.dynamodb_handler import DynamoDb
 
